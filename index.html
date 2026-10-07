@@ -1,11 +1,16 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#030a16"><title>CodeXaStacio TV Guide</title><link rel="manifest" href="./manifest.json?v=14"><link rel="stylesheet" href="./styles.css?v=14"></head>
-<body><div id="app"><main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="muted">Cargando plataforma deportiva…</p><div class="notice small">DISH 110°/119° • Sports Guide</div></section></main></div>
-<script>
-function bootError(message){var a=document.getElementById('app');a.innerHTML='<main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="danger">No se pudo iniciar la aplicación.</p><p class="small muted">'+message+'</p><button class="btn primary" onclick="location.reload()">Reintentar</button></section></main>'}
-window.addEventListener('error',function(e){if(e.filename&&e.filename.indexOf('app.js')>=0)bootError('Error interno de app.js: '+(e.message||'desconocido'))});
-if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})});if('caches' in window)caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})})}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" crossorigin="anonymous" onerror="bootError('No se pudo cargar el servicio Supabase desde el CDN.')"></script>
-<script src="./app.js?v=14"></script>
-</body></html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#030a16">
+<meta name="description" content="CodeXaStacio TV Guide - DISH 110/119 sports finder">
+<title>CodeXaStacio TV Guide</title>
+<link rel="stylesheet" href="./styles.css?v=15">
+</head>
+<body>
+<div id="app"><main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="muted">Iniciando v15…</p></section></main></div>
+<script src="./app.js?v=15"></script>
+<noscript><main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="danger">JavaScript está desactivado en este navegador.</p></section></main></noscript>
+</body>
+</html>
