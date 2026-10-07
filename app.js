@@ -37,7 +37,7 @@ function content(){
  return `${heroSlider()}<div class="top"><div><h2 style="margin:0">Encuentra tus deportes</h2><p class="muted">Busca canales, deportes y plataformas.</p></div><input id="search" class="input" style="max-width:390px" placeholder="Buscar DISH, Disney+, DAZN, Netflix, Paramount+…"></div>${chips()}<h2>Plataformas</h2>${providerCards()}<h2>Canales destacados DISH</h2>${channelCards(filteredChannels)}`;
 }
 function dashboard(){
- app.innerHTML=`<main class="wrap"><header class="top"><div><div class="brand">CodeXaStacio TV Guide</div><div class="small muted">DISH 110°W / 119°W • Universal Sports Finder</div></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v19 Sports</footer></main>`;
+ app.innerHTML=`<main class="wrap"><header class="top"><div><div class="brand">CodeXaStacio TV Guide</div><div class="small muted">DISH 110°W / 119°W • Universal Sports Finder</div></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v20 Watch Demo</footer></main>`;
  bind();
 }
 function bind(){
@@ -46,10 +46,23 @@ function bind(){
  document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{state.sport=b.dataset.sport;if(state.view==="home")state.view="schedule";dashboard()});
  setupSlider();const q=document.getElementById("search");if(q)q.oninput=()=>document.querySelectorAll(".searchable").forEach(x=>x.classList.toggle("hidden",!x.dataset.search.includes(q.value.toLowerCase())));
 }
+function demoWhereToWatch(e){
+ const sport=(e.strSport||"").toLowerCase(),league=(e.strLeague||"").toLowerCase(),name=(e.strEvent||"").toLowerCase();
+ const out=[];
+ const add=(name,label)=>{if(!out.some(x=>x.name===name))out.push({name,label})};
+ if(/american football|basketball|baseball|ice hockey|tennis/.test(sport))add("DISH","Canales deportivos");
+ if(/american football|basketball|ice hockey|tennis/.test(sport))add("Disney+","ESPN / deportes");
+ if(/boxing|fighting|mma|soccer/.test(sport)||/nfl/.test(league))add("DAZN","Deportes");
+ if(/soccer/.test(sport)||/uefa|champions|europa|cbs/.test(league+" "+name))add("Paramount+","Fútbol / CBS Sports");
+ if(/boxing|wrestling/.test(sport)||/special|exhibition/.test(name))add("Netflix","Eventos especiales");
+ if(!out.length)add("DISH","Consultar programación");
+ return out.slice(0,3);
+}
+function watchBadges(e){return `<div class="watch-row"><span class="small muted">Dónde verlo:</span>${demoWhereToWatch(e).map(x=>`<span class="watch-pill">${esc(x.name)} <small>${esc(x.label)}</small></span>`).join("")}</div><div class="demo-rights">DEMO • disponibilidad y derechos por verificar</div>`}
 let sliderEvents=[],slideIndex=0;
 function setupSlider(){const hero=document.getElementById("sportsHero");if(!hero)return;document.getElementById("slidePrev").onclick=()=>showSlide(-1);document.getElementById("slideNext").onclick=()=>showSlide(1);loadSportsSlider()}
-function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"";hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.94),rgba(2,8,20,.25)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay"><span class="badge">${esc(e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p></div>`}
-async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).slice(0,18);if(sliderEvents.length){showSlide();setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
+function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"";hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.94),rgba(2,8,20,.25)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay"><span class="badge">${esc(e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}</div>`}
+async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,18);if(sliderEvents.length){showSlide();setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
 function login(){
  app.innerHTML=`<main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="muted">Acceso a tu cuenta</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" required><br><br><button class="btn primary" style="width:100%">Entrar</button></form><br><button id="signup" class="btn" style="width:100%">Crear cuenta</button><br><br><button id="back" class="btn" style="width:100%">← Volver a la guía</button><div id="msg" class="small muted" style="margin-top:12px">${sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…"}</div></section></main>`;
  document.getElementById("back").onclick=dashboard; document.getElementById("signup").onclick=register;
