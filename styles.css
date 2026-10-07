@@ -5,3 +5,8 @@
 .slide-arrow{position:absolute;z-index:4;top:50%;transform:translateY(-50%);border:1px solid var(--line);background:rgba(3,10,22,.78);color:#fff;width:40px;height:54px;border-radius:12px;font-size:28px;cursor:pointer}.slide-arrow:first-child{left:10px}.slide-arrow:last-child{right:10px}
 .provider-grid{margin-bottom:24px}
 @media(max-width:700px){.sports-slider,.hero-slide{min-height:250px}.hero-overlay{padding:32px 44px 24px}.slide-arrow{width:34px}}
+
+.watch-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.watch-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(5,16,35,.82);font-weight:700;font-size:13px}
+.watch-pill small{font-weight:500;color:var(--muted)}
+.demo-rights{margin-top:9px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
