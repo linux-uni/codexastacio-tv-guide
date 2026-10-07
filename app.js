@@ -45,7 +45,8 @@ function content(){
  return `${heroSlider()}<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>${chips()}<h2>Plataformas digitales</h2>${providerCards()}<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>${channelFilters()}${channelCards(filteredChannels)}`;
 }
 function dashboard(){
- app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v25 Futuristic Cover</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
+ if(!currentUser){login();return}
+ app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v26 Login Fix</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
  bind();
 }
 function bind(){
@@ -72,10 +73,41 @@ function setupSlider(){const hero=document.getElementById("sportsHero");if(!hero
 function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"";hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.94),rgba(2,8,20,.25)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay"><span class="badge">${esc(e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}</div>`}
 async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,18);if(sliderEvents.length){showSlide();renderProviders();dashboardChannelRefresh();setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-grid");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
+function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
+async function openSession(user){
+ currentUser=user;
+ try{
+  const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username").eq("id",user.id).maybeSingle(),7000);
+  if(p?.role==="admin"&&p?.status==="active")return adminPanel(p);
+ }catch(e){console.warn("Profile lookup:",e)}
+ dashboard();
+}
 function login(){
- app.innerHTML=`<main class="wrap"><section class="panel login"><div class="brand">CodeXaStacio TV Guide</div><p class="muted">Acceso a tu cuenta</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" required><br><br><button class="btn primary" style="width:100%">Entrar</button></form><br><button id="signup" class="btn" style="width:100%">Crear cuenta</button><div id="msg" class="small muted" style="margin-top:12px">${sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…"}</div></section></main>`;
+ app.innerHTML=`<main class="wrap"><section class="panel login"><div class="cx-logo login-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><p class="muted">Acceso privado</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><br><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><br><button id="signup" class="btn" style="width:100%">Crear cuenta</button><div id="msg" class="small muted" style="margin-top:12px">${sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…"}</div></section></main>`;
  document.getElementById("signup").onclick=register;
- document.getElementById("login").onsubmit=async e=>{e.preventDefault();const msg=document.getElementById("msg");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía no está disponible.";return}let email=document.getElementById("identity").value.trim();const password=document.getElementById("pw").value;msg.textContent="Iniciando sesión…";let error=null;if(email.includes("@")){({error}=await sb.auth.signInWithPassword({email,password}))}else{try{const r=await fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:email,password})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const s=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});error=s.error}catch(e){error=e}}msg.className=error?"danger small":"ok small";msg.textContent=error?error.message:"Sesión iniciada correctamente.";if(!error){const {data:{user}}=await sb.auth.getUser();currentUser=user;const {data:p}=await sb.from("profiles").select("role,status,full_name,username").single();if(p?.role==="admin"&&p?.status==="active")adminPanel(p);else dashboard()}};
+ document.getElementById("login").onsubmit=async e=>{
+  e.preventDefault();const msg=document.getElementById("msg"),btn=document.getElementById("loginBtn");
+  if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}
+  const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;
+  btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";
+  try{
+   let data=null,error=null;
+   if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));
+   else{
+    const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));
+    const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");
+    const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error;
+   }
+   if(error)throw error;
+   const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;
+   if(!user)throw new Error("No se pudo validar la sesión.");
+   msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";
+   await openSession(user);
+  }catch(err){
+   msg.className="danger small";msg.textContent=err?.message||"No fue posible iniciar sesión.";
+   btn.disabled=false;btn.textContent="Entrar";
+  }
+ };
 }
 function register(){
  app.innerHTML=`<main class="wrap"><section class="panel login"><div class="brand">Crear cuenta</div><p class="muted">Regístrate en CodeXaStacio TV Guide</p><form id="reg"><input id="name" class="input" placeholder="Nombre completo" required><br><br><input id="username" class="input" placeholder="Usuario" required><br><br><input id="email" class="input" type="email" placeholder="Correo electrónico" required><br><br><input id="phone" class="input" placeholder="Teléfono"><br><br><input id="password" class="input" type="password" minlength="8" placeholder="Contraseña (mínimo 8 caracteres)" required><br><br><button class="btn primary" style="width:100%">Crear cuenta</button></form><br><button id="backLogin" class="btn" style="width:100%">← Volver al login</button><div id="regmsg" class="small muted" style="margin-top:12px"></div></section></main>`;
