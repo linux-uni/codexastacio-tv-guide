@@ -22,7 +22,7 @@ const events=[
 ];
 let sb=null,currentUser=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",state={view:"home",sport:"Todos"};
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-function nav(){return `<nav class="nav">${[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"]].map(x=>`<button data-view="${x[0]}" class="btn ${state.view===x[0]?"active":""}">${x[1]}</button>`).join("")}</nav>`}
+function nav(){return `<nav class="nav desktop-nav">${[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"]].map(x=>`<button data-view="${x[0]}" class="btn ${state.view===x[0]?"active":""}">${x[1]}</button>`).join("")}</nav>`}
 function chips(){return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL","Fútbol","Tenis","UFC/MMA"].map(x=>`<button data-sport="${x}" class="chip ${state.sport===x?"active":""}">${x}</button>`).join("")}</div>`}
 function providerCards(){return `<div id="providerGrid" class="grid provider-grid"><div class="notice">Actualizando próximos eventos por plataforma…</div></div>`}
 function providerEventCards(){const digital=["Disney+","DAZN","Netflix","Paramount+"];return digital.map(name=>{const found=sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name===name));const img=found&&(found.strThumb||found.strPoster||found.strFanart);return `<article class="card provider-event searchable" data-search="${esc((name+" "+(found?.strEvent||"")).toLowerCase())}" ${img?`style="background-image:linear-gradient(180deg,rgba(4,10,24,.25),rgba(4,10,24,.96)),url('${esc(img)}')"`:""}><div class="provider-logo">${esc(name)}</div><div class="provider-bottom"><span class="badge">PRÓXIMO</span><h3>${esc(found?.strEvent||"Próximos eventos")}</h3><p class="small muted">${esc(found?[found.dateEvent,found.strTime].filter(Boolean).join(" • "):"Actualizando programación…")}</p></div></article>`}).join("")}
@@ -45,9 +45,10 @@ function content(){
  if(state.view==="leagues")return `<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p>${chips()}${eventCards(filteredEvents)}`;
  return `${heroSlider()}<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>${chips()}<h2>Plataformas digitales</h2>${providerCards()}<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>${channelFilters()}${channelCards(filteredChannels)}`;
 }
+function mobileNav(){return `<nav class="mobile-nav" aria-label="Navegación móvil">${[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"]].map(x=>`<button data-view="${x[0]}" class="${state.view===x[0]?"active":""}"><i>${x[1]}</i><span>${x[2]}</span></button>`).join("")}</nav>`}
 function dashboard(){
  if(!currentUser){login();return}
- app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v28 Hero Fix</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
+ app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section>${mobileNav()}<footer class="footer">CodeXaStacio TV Guide • v29 Mobile PWA</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
  bind();
 }
 function bind(){
@@ -142,3 +143,5 @@ async function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
+
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=29").catch(e=>console.warn("SW:",e)))}
