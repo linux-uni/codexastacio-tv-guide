@@ -22,7 +22,25 @@ const events=[
 ];
 let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,state={view:"home",sport:"Todos"};
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-function nav(){return `<nav class="nav desktop-nav">${[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"]].map(x=>`<button data-view="${x[0]}" class="btn ${state.view===x[0]?"active":""}">${x[1]}</button>`).join("")}</nav>`}
+
+function canView(view){
+ if(currentProfile?.role==="admin")return true;
+ if(view==="schedule")return currentProfile?.can_view_schedule!==false;
+ if(view==="channels")return currentProfile?.can_view_channels!==false;
+ if(view==="leagues")return currentProfile?.can_view_leagues!==false;
+ if(view==="providers")return currentProfile?.can_view_providers!==false;
+ return true;
+}
+function safeDateTime(value){if(!value)return "Sin fecha";const d=new Date(value);return Number.isNaN(d.getTime())?"Sin fecha":d.toLocaleString()}
+function passwordRecovery(){
+ app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Nueva contraseña</div><div class="cx-login-sub">CODEXASTACIO</div></div><h2>Restablecer acceso</h2><p class="muted">Crea una nueva contraseña para tu cuenta.</p><form id="recoveryForm"><input id="newPassword" class="input" type="password" minlength="8" autocomplete="new-password" placeholder="Nueva contraseña (mínimo 8 caracteres)" required><br><br><input id="confirmPassword" class="input" type="password" minlength="8" autocomplete="new-password" placeholder="Confirmar contraseña" required><br><br><button class="btn primary" style="width:100%">Guardar contraseña</button></form><div id="recoveryMsg" class="small muted" style="margin-top:12px"></div></section></main>';
+ document.getElementById("recoveryForm").onsubmit=async e=>{e.preventDefault();const pw=document.getElementById("newPassword").value,cp=document.getElementById("confirmPassword").value,msg=document.getElementById("recoveryMsg");if(pw!==cp){msg.className="danger small";msg.textContent="Las contraseñas no coinciden.";return}const {error}=await sb.auth.updateUser({password:pw});if(error){msg.className="danger small";msg.textContent=error.message;return}history.replaceState({},document.title,location.pathname);msg.className="ok small";msg.textContent="Contraseña actualizada. Abriendo la guía…";setTimeout(async()=>{const {data}=await sb.auth.getUser();if(data?.user)await openSession(data.user);else login()},700)}
+}
+function nav(){
+ const items=[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"]].filter(([v])=>v==="home"||canView(v));
+ return '<nav class="nav desktop-nav">'+items.map(x=>'<button data-view="'+x[0]+'" class="btn '+(state.view===x[0]?"active":"")+'">'+x[1]+'</button>').join("")+'</nav>'
+}
+
 function chips(){return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL","Fútbol","Tenis","UFC/MMA"].map(x=>`<button data-sport="${x}" class="chip ${state.sport===x?"active":""}">${x}</button>`).join("")}</div>`}
 function providerCards(){return `<div id="providerGrid" class="grid provider-grid"><div class="notice">Actualizando próximos eventos por plataforma…</div></div>`}
 function providerEventCards(){const digital=["Disney+","DAZN","Netflix","Paramount+"];return digital.map(name=>{const found=sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name===name));const img=found&&(found.strThumb||found.strPoster||found.strFanart);return `<article class="card provider-event searchable" data-search="${esc((name+" "+(found?.strEvent||"")).toLowerCase())}" ${img?`style="background-image:linear-gradient(180deg,rgba(4,10,24,.25),rgba(4,10,24,.96)),url('${esc(img)}')"`:""}><div class="provider-logo">${esc(name)}</div><div class="provider-bottom"><span class="badge">PRÓXIMO</span><h3>${esc(found?.strEvent||"Próximos eventos")}</h3><p class="small muted">${esc(found?[found.dateEvent,found.strTime].filter(Boolean).join(" • "):"Actualizando programación…")}</p></div></article>`}).join("")}
@@ -45,7 +63,11 @@ function content(){
  if(state.view==="leagues")return `<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p>${chips()}${eventCards(filteredEvents)}`;
  return `${heroSlider()}<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>${chips()}<h2>Plataformas digitales</h2>${providerCards()}<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>${channelFilters()}${channelCards(filteredChannels)}`;
 }
-function mobileNav(){return `<nav class="mobile-nav" aria-label="Navegación móvil">${[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["account","◎","Cuenta"]].map(x=>`<button data-view="${x[0]}" class="${state.view===x[0]?"active":""}"><i>${x[1]}</i><span>${x[2]}</span></button>`).join("")}</nav>`}
+function mobileNav(){
+ const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||canView(v));
+ return '<nav class="mobile-nav" aria-label="Navegación móvil">'+items.map(x=>'<button data-view="'+x[0]+'" class="'+(state.view===x[0]?"active":"")+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join("")+'</nav>'
+}
+
 function dashboard(){
  if(!currentUser){login();return}
  app.innerHTML=`<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><button id="menuProfile">⚙ Mi perfil</button>${currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':""}<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>${nav()}<section class="panel">${content()}</section>${mobileNav()}<footer class="footer">CodeXaStacio TV Guide • v34 Control Center</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
@@ -76,34 +98,24 @@ function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex
 async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,18);if(sliderEvents.length){showSlide();renderProviders();dashboardChannelRefresh();clearInterval(sliderTimer);sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1);else clearInterval(sliderTimer)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
-async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}dashboard()}
-function login(){
- app.innerHTML=`<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div><h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><br><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><br><button id="signup" class="btn" style="width:100%">Crear cuenta</button><div id="msg" class="small muted" style="margin-top:12px">${sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…"}</div></section></main>`;
- document.getElementById("signup").onclick=register;document.getElementById("forgot").onclick=async()=>{if(!sb)return;const email=prompt("Escribe el correo electrónico de tu cuenta:");if(!email)return;const msg=document.getElementById("msg");msg.textContent="Enviando enlace…";const {error}=await sb.auth.resetPasswordForEmail(email.trim(),{redirectTo:location.origin+location.pathname+"?recovery=1"});msg.className=error?"danger small":"ok small";msg.textContent=error?error.message:"Revisa tu correo. Te enviamos un enlace para crear una nueva contraseña."};
- document.getElementById("login").onsubmit=async e=>{
-  e.preventDefault();const msg=document.getElementById("msg"),btn=document.getElementById("loginBtn");
-  if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}
-  const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;
-  btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";
-  try{
-   let data=null,error=null;
-   if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));
-   else{
-    const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));
-    const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");
-    const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error;
-   }
-   if(error)throw error;
-   const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;
-   if(!user)throw new Error("No se pudo validar la sesión.");
-   msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";
-   await openSession(user);
-  }catch(err){
-   msg.className="danger small";msg.textContent=err?.message||"No fue posible iniciar sesión.";
-   btn.disabled=false;btn.textContent="Entrar";
-  }
- };
+async function openSession(user){
+ currentUser=user;
+ try{
+  const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);
+  currentProfile=p||null;
+  if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}
+ }catch(e){console.warn("Profile lookup:",e)}
+ dashboard()
 }
+
+function login(notice=""){
+ app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div><h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><br><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><br><button id="signup" class="btn" style="width:100%">Crear cuenta</button><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
+ const msg=document.getElementById("msg");msg.className=notice?"danger small":"small muted";msg.textContent=notice|| (sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…");
+ document.getElementById("signup").onclick=register;
+ document.getElementById("forgot").onclick=async()=>{if(!sb)return;const email=prompt("Escribe el correo electrónico de tu cuenta:");if(!email)return;msg.className="small muted";msg.textContent="Enviando enlace…";const {error}=await sb.auth.resetPasswordForEmail(email.trim(),{redirectTo:location.origin+location.pathname+"?recovery=1"});msg.className=error?"danger small":"ok small";msg.textContent=error?error.message:"Revisa tu correo. Te enviamos un enlace para crear una nueva contraseña."};
+ document.getElementById("login").onsubmit=async e=>{e.preventDefault();const btn=document.getElementById("loginBtn");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";try{let data=null,error=null;if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));else{const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error}if(error)throw error;const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;if(!user)throw new Error("No se pudo validar la sesión.");msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";await openSession(user)}catch(err){msg.className="danger small";msg.textContent=err?.message||"No fue posible iniciar sesión.";btn.disabled=false;btn.textContent="Entrar"}}
+}
+
 function register(){
  app.innerHTML=`<main class="wrap"><section class="panel login"><div class="brand">Crear cuenta</div><p class="muted">Regístrate en CodeXaStacio TV Guide</p><form id="reg"><input id="name" class="input" placeholder="Nombre completo" required><br><br><input id="username" class="input" placeholder="Usuario" required><br><br><input id="email" class="input" type="email" placeholder="Correo electrónico" required><br><br><input id="phone" class="input" placeholder="Teléfono"><br><br><input id="password" class="input" type="password" minlength="8" placeholder="Contraseña (mínimo 8 caracteres)" required><br><br><button class="btn primary" style="width:100%">Crear cuenta</button></form><br><button id="backLogin" class="btn" style="width:100%">← Volver al login</button><div id="regmsg" class="small muted" style="margin-top:12px"></div></section></main>`;
  document.getElementById("backLogin").onclick=login;
@@ -122,27 +134,13 @@ function adminPanel(p){
  app.innerHTML=`<main class="wrap"><header class="top"><div><div class="brand">CodeXaStacio Admin</div><div class="small muted">Administrador • ${esc(p.full_name||p.username||"Cuenta")}</div></div><button id="logout" class="btn">Cerrar sesión</button></header><section class="panel"><h2>Panel administrativo</h2><div class="grid"><article class="card"><strong>Usuarios</strong><h3>Administrar accesos</h3><p class="muted small">Control de perfiles y estado.</p></article><article class="card"><strong>Servicios</strong><h3>Proveedores deportivos</h3><p class="muted small">DISH y servicios habilitados.</p></article><article class="card"><strong>Canales</strong><h3>Guía DISH</h3><p class="muted small">Gestión de canales 110°W / 119°W.</p></article><article class="card"><strong>Programación</strong><h3>Eventos</h3><p class="muted small">Gestión de programación deportiva.</p></article></div><br><button id="guide" class="btn primary">Abrir guía pública</button></section><footer class="footer">CodeXaStacio TV Guide • v17 Admin</footer></main>`;
  document.getElementById("guide").onclick=dashboard;document.getElementById("logout").onclick=logout;
 }
-async function loadSupabase(){
+function loadSupabase(){
  const s=document.createElement("script");
  s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js";
  s.async=true;
- s.onload=async()=>{
-  try{
-   if(!window.supabase?.createClient)throw new Error("Cliente de cuenta no disponible");
-   sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-   const {data,error}=await withTimeout(sb.auth.getSession(),8000);
-   if(error)throw error;
-   const user=data?.session?.user||null;
-   if(user)await openSession(user);else login();
-  }catch(e){
-   console.error("Auth bootstrap:",e);
-   login();
-   const m=document.getElementById("msg");if(m){m.className="danger small";m.textContent="No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente."}
-  }
- };
- s.onerror=()=>{login();const m=document.getElementById("msg");if(m){m.className="danger small";m.textContent="No se pudo cargar el servicio de acceso."}};
+ s.onload=async()=>{try{if(!window.supabase?.createClient)throw new Error("Cliente de cuenta no disponible");sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});sb.auth.onAuthStateChange((event)=>{if(event==="PASSWORD_RECOVERY")setTimeout(passwordRecovery,0);if(event==="SIGNED_OUT"){currentUser=null;currentProfile=null}});const {data,error}=await withTimeout(sb.auth.getSession(),8000);if(error)throw error;const user=data?.session?.user||null;if(new URLSearchParams(location.search).get("recovery")==="1"&&user)return passwordRecovery();if(user)await openSession(user);else login()}catch(e){console.error("Auth bootstrap:",e);login("No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente.")}};
+ s.onerror=()=>login("No se pudo cargar el servicio de acceso.");
  document.head.appendChild(s);
 }
 login();loadSupabase();
-
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=34").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=35").catch(e=>console.warn("SW:",e)))}
