@@ -17,4 +17,28 @@ function channelView(){return shell('<section class="panel"><h2>Canales deportiv
 async function usersView(){let [{data:ps},{data:ss}]=await Promise.all([sb.from("profiles").select("*").order("created_at"),sb.from("user_services").select("*")]),streams=S.providers.filter(p=>!p.is_base);app.innerHTML=shell('<section class="panel"><h2>Usuarios y servicios</h2><p class="muted">DISH 110°/119° usa el TV listing como fuente base. Los cambios de streaming se guardan en Supabase.</p><div class="tablewrap"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Email</th><th>Teléfono</th><th>Estado</th><th>Servicios</th></tr></thead><tbody>'+(ps||[]).filter(u=>u.role!=="admin").map(u=>'<tr><td>'+esc(u.full_name)+'</td><td>'+esc(u.username)+'</td><td>'+esc(u.email)+'</td><td>'+esc(u.phone)+'</td><td><button class="btn" data-status="'+u.id+'" data-value="'+u.status+'">'+esc(u.status)+'</button></td><td><span class="badge ok">DISH ✓</span> '+streams.map(p=>{let x=(ss||[]).find(s=>s.user_id===u.id&&s.provider_id===p.id);return '<label class="badge"><input type="checkbox" data-uid="'+u.id+'" data-pid="'+p.id+'" '+(x?.enabled?"checked":"")+'> '+esc(p.name)+'</label>'}).join(" ")+'</td></tr>').join("")+'</tbody></table></div></section>');bind();document.querySelectorAll("[data-uid]").forEach(x=>x.onchange=async()=>{await sb.from("user_services").upsert({user_id:x.dataset.uid,provider_id:+x.dataset.pid,enabled:x.checked})});document.querySelectorAll("[data-status]").forEach(x=>x.onclick=async()=>{let v=x.dataset.value==="active"?"restricted":"active";await sb.from("profiles").update({status:v}).eq("id",x.dataset.status);usersView()})}
 function bind(){document.querySelector("#out")?.addEventListener("click",()=>sb.auth.signOut());document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{S.view=b.dataset.v;render()});document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{S.provider=b.dataset.p;render()});document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{S.sport=b.dataset.s;render()});let q=document.querySelector("#search");if(q)q.oninput=()=>document.querySelectorAll(".event").forEach(c=>c.classList.toggle("hidden",!c.dataset.search.includes(q.value.toLowerCase())))}
 function render(){if(!S.session)return login();if(S.view==="users"&&admin())return usersView();app.innerHTML=S.view==="channels"&&admin()?channelView():guide();bind()}
-(async()=>{let {data:{session}}=await sb.auth.getSession();S.session=session;if(session)await load();else login();sb.auth.onAuthStateChange(async(_,s)=>{S.session=s;if(s)await load();else{S.profile=null;login()}})})();
+async function boot(){
+  const timer=setTimeout(()=>{if(app.textContent.includes("Cargando plataforma"))login()},2500);
+  try{
+    const result=await Promise.race([
+      sb.auth.getSession(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("auth timeout")),5000))
+    ]);
+    clearTimeout(timer);
+    S.session=result?.data?.session||null;
+    if(S.session) await load(); else login();
+    sb.auth.onAuthStateChange((_,s)=>{
+      S.session=s;
+      if(s) load().catch(e=>console.error("auth load",e));
+      else {S.profile=null;login()}
+    });
+  }catch(e){
+    clearTimeout(timer);
+    console.warn("boot",e);
+    S.session=null;
+    login();
+    const msg=document.querySelector("#msg");
+    if(msg) msg.textContent="El servicio de sesión tardó demasiado. Puedes intentar iniciar sesión.";
+  }
+}
+boot();
