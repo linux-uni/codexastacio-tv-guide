@@ -265,4 +265,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=38").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=39").catch(e=>console.warn("SW:",e)))}
