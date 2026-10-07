@@ -106,3 +106,13 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
  .modal-backdrop{padding:10px}.admin-modal{padding:16px;border-radius:20px}
  .admin-content-row{align-items:stretch;flex-direction:column}.admin-content-row .user-actions{justify-content:flex-start}
 }
+
+/* v37 League feeds */
+.hero-slide.feed-nfl,.hero-slide.feed-nhl,.hero-slide.feed-mlb,.hero-slide.feed-nba{background-size:cover;background-position:center}
+.hero-slide.feed-nfl{background-color:#081b32;background-image:radial-gradient(circle at 75% 30%,rgba(30,120,255,.28),transparent 32%),linear-gradient(120deg,#06101f,#102f55)}
+.hero-slide.feed-nhl{background-color:#071522;background-image:radial-gradient(circle at 78% 28%,rgba(155,225,255,.24),transparent 30%),linear-gradient(120deg,#06101a,#16344a)}
+.hero-slide.feed-mlb{background-color:#10132a;background-image:radial-gradient(circle at 78% 28%,rgba(255,58,85,.20),transparent 30%),linear-gradient(120deg,#08102a,#20265a)}
+.hero-slide.feed-nba{background-color:#171028;background-image:radial-gradient(circle at 78% 28%,rgba(255,128,40,.23),transparent 30%),linear-gradient(120deg,#0a1025,#35214c)}
+.league-feed-art{width:min(320px,72vw);aspect-ratio:16/5;border:1px solid rgba(255,255,255,.16);border-radius:18px;margin:0 0 18px;display:flex;align-items:center;gap:13px;padding:14px 18px;background:rgba(2,8,20,.58);box-shadow:0 16px 50px rgba(0,0,0,.35);backdrop-filter:blur(12px)}
+.league-feed-art span{font-size:clamp(28px,5vw,54px);font-weight:1000;letter-spacing:-.06em}.league-feed-art small{font-weight:800;letter-spacing:.15em;color:#a9cfff}
+.google-feed-btn{display:inline-flex;margin-top:14px;padding:10px 14px;border-radius:12px;border:1px solid rgba(81,174,255,.35);background:rgba(20,118,255,.14);color:#dff3ff;text-decoration:none;font-weight:800;font-size:13px}.google-feed-btn:hover{background:rgba(20,118,255,.25)}
