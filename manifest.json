@@ -1,1 +1,35 @@
-{"name":"CodeXaStacio TV + Sports Guide","short_name":"CX TV Guide","start_url":"./","display":"standalone","background_color":"#08111f","theme_color":"#101827","description":"Independent satellite and streaming sports guide."}
+{
+  "id": "./",
+  "name": "CodeXaStacio TV Guide",
+  "short_name": "CX TV Guide",
+  "description": "Tu guía deportiva para canales, programación y plataformas de streaming.",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#020814",
+  "theme_color": "#061126",
+  "categories": [
+    "sports",
+    "entertainment"
+  ],
+  "lang": "es",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Programación",
+      "short_name": "Programación",
+      "url": "./?source=pwa&view=schedule"
+    },
+    {
+      "name": "Canales",
+      "short_name": "Canales",
+      "url": "./?source=pwa&view=channels"
+    }
+  ]
+}
