@@ -131,3 +131,15 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .matchup-visual.compact .team-side{flex-direction:column;text-align:center;gap:7px}.matchup-visual.compact .team-side:last-child{flex-direction:column}.matchup-visual.compact .team-side img,.matchup-visual.compact .team-fallback{width:52px;height:52px}.matchup-visual.compact .team-side b{font-size:11px;max-width:92px}
 .google-feed-btn{transition:transform .18s ease,background .18s ease,border-color .18s ease}.google-feed-btn:hover{transform:translateY(-1px);border-color:rgba(104,197,255,.65)}
 @media(max-width:720px){.hero-slide{min-height:500px}.hero-overlay{padding:22px}.matchup-visual{width:100%;gap:8px;padding:13px 10px}.team-side{flex-direction:column;text-align:center;gap:7px}.team-side:last-child{flex-direction:column;text-align:center}.team-side img,.team-fallback{width:56px;height:56px}.team-side b{font-size:11px;max-width:100px}.schedule-card{display:block}.schedule-card .matchup-visual.compact{width:100%;min-width:0;min-height:145px}.versus strong{font-size:17px}}
+
+/* v39 Schedule layout hotfix */
+.schedule-list{display:grid;gap:16px;min-width:0}
+.schedule-card{display:grid!important;grid-template-columns:minmax(260px,34%) minmax(0,1fr)!important;align-items:stretch;min-width:0;width:100%;overflow:hidden}
+.schedule-card .matchup-visual.compact{box-sizing:border-box;width:100%!important;min-width:0!important;max-width:none!important;height:100%;min-height:168px;margin:0!important;border-radius:0!important}
+.schedule-card .schedule-info{box-sizing:border-box;min-width:0;padding:22px 24px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.schedule-card .schedule-info h3{margin:8px 0 7px;max-width:100%;font-size:clamp(18px,2vw,26px);line-height:1.15;white-space:normal;overflow-wrap:anywhere}
+.schedule-card .schedule-info .row{min-width:0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.schedule-card .schedule-info .small{white-space:normal}
+.schedule-card .schedule-info .watch-row,.schedule-card .schedule-info .where-to-watch{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}
+.schedule-card .schedule-info .provider-badge,.schedule-card .schedule-info .watch-badge{max-width:100%;white-space:normal}
+@media(max-width:760px){.schedule-card{grid-template-columns:1fr!important}.schedule-card .matchup-visual.compact{min-height:150px}.schedule-card .schedule-info{padding:18px}.schedule-card .schedule-info h3{font-size:20px}}
