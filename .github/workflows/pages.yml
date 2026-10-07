@@ -28,6 +28,14 @@ jobs:
           test -s manifest.json
           test -s sw.js
           node --check app.js
+      - name: Smoke-check critical functions
+        run: |
+          grep -q 'function passwordRecovery' app.js
+          grep -q 'function loadManagedContent' app.js
+          grep -q 'function adminPlatformsWorkspace' app.js
+          grep -q 'function adminChannelsWorkspace' app.js
+          grep -q 'function adminScheduleWorkspace' app.js
+          grep -q 'function adminPermissionsUser' app.js
 
       - name: Publish latest main to gh-pages
         shell: bash
