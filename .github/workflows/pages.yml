@@ -1,4 +1,4 @@
-name: Sync site to gh-pages
+name: Publish CodeXaStacio v15
 
 on:
   push:
@@ -16,16 +16,16 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Publish static files to gh-pages
-        shell: bash
+      - name: Validate required files
+        run: |
+          test -s index.html
+          test -s app.js
+          test -s styles.css
+      - name: Publish to gh-pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git reset --hard origin/main
-          git push origin gh-pages --force
+          git push origin HEAD:gh-pages --force
