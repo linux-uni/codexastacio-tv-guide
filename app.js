@@ -20,7 +20,17 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,state={view:"home",sport:"Todos"};
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,state={view:"home",sport:"Todos"};;
+const GOOGLE_SPORT_FEEDS={
+ NFL:"https://www.google.com/search?q=NFL#sie=lg;/g/11ys7ykdbc;6;/m/059yj;mt;fp;1;;;;-1;",
+ NHL:"https://www.google.com/search?q=NHL#sie=lg;/g/11z2g4qfn8;7;/m/05gwr;mt;fp;1;;;;-1",
+ MLB:"https://www.google.com/search?q=MLB#sie=lg;/g/11xvs8rv1_;4;/m/09p14;mt;fp;1;;;;-1",
+ NBA:"https://www.google.com/search?q=NBA#sie=lg;/g/11z276br2n;3;/m/05jvx;mt;fp;1;;;;-1"
+};
+function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||s.includes("basketball"))return "NBA";return ""}
+function googleFeedLink(e){const k=leagueKey(e);return k?GOOGLE_SPORT_FEEDS[k]:""}
+function feedVisual(e){const k=leagueKey(e);return k?'<div class="league-feed-art league-'+k.toLowerCase()+'"><span>'+k+'</span><small>LIVE SPORTS FEED</small></div>':""}
+
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
 function canView(view){
@@ -128,7 +138,8 @@ function demoWhereToWatch(e){
 function watchBadges(e){const list=e._managed?[e._channelName?{name:e._channelName,label:"Canal"}:null,e._providerName?{name:e._providerName,label:"Plataforma"}:null].filter(Boolean):demoWhereToWatch(e);return '<div class="watch-row"><span class="small muted">Dónde verlo:</span>'+list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join("")+'</div>'}
 
 function setupSlider(){const hero=document.getElementById("sportsHero");if(!hero)return;document.getElementById("slidePrev").onclick=()=>showSlide(-1);document.getElementById("slideNext").onclick=()=>showSlide(1);loadSportsSlider()}
-function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"";hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.94),rgba(2,8,20,.25)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay"><span class="badge">${esc(e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}</div>`}
+function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=googleFeedLink(e);hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.94),rgba(2,8,20,.25)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay">${!img?feedVisual(e):""}<span class="badge">${esc(key||e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}${feed?`<a class="google-feed-btn" href="${esc(feed)}" target="_blank" rel="noopener">Ver calendario ${esc(key)} en Google ↗</a>`:""}</div>`}
+
 async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,18);if(sliderEvents.length){showSlide();renderProviders();dashboardChannelRefresh();clearInterval(sliderTimer);sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1);else clearInterval(sliderTimer)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
