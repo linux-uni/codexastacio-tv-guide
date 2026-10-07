@@ -46,7 +46,7 @@ function content(){
 }
 function dashboard(){
  if(!currentUser){login();return}
- app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v26 Login Fix</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
+ app.innerHTML=`<main class="wrap"><header class="top"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><button id="account" class="btn primary">${currentUser?"Cerrar sesión":"Mi cuenta"}</button></header>${nav()}<section class="panel">${content()}</section><footer class="footer">CodeXaStacio TV Guide • v27 Auth Rebuild</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>`;
  bind();
 }
 function bind(){
@@ -119,5 +119,25 @@ function adminPanel(p){
  app.innerHTML=`<main class="wrap"><header class="top"><div><div class="brand">CodeXaStacio Admin</div><div class="small muted">Administrador • ${esc(p.full_name||p.username||"Cuenta")}</div></div><button id="logout" class="btn">Cerrar sesión</button></header><section class="panel"><h2>Panel administrativo</h2><div class="grid"><article class="card"><strong>Usuarios</strong><h3>Administrar accesos</h3><p class="muted small">Control de perfiles y estado.</p></article><article class="card"><strong>Servicios</strong><h3>Proveedores deportivos</h3><p class="muted small">DISH y servicios habilitados.</p></article><article class="card"><strong>Canales</strong><h3>Guía DISH</h3><p class="muted small">Gestión de canales 110°W / 119°W.</p></article><article class="card"><strong>Programación</strong><h3>Eventos</h3><p class="muted small">Gestión de programación deportiva.</p></article></div><br><button id="guide" class="btn primary">Abrir guía pública</button></section><footer class="footer">CodeXaStacio TV Guide • v17 Admin</footer></main>`;
  document.getElementById("guide").onclick=dashboard;document.getElementById("logout").onclick=logout;
 }
-function loadSupabase(){const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js";s.async=true;s.onload=async()=>{try{if(window.supabase?.createClient){sb=window.supabase.createClient(CFG.url,CFG.key);const {data}=await sb.auth.getSession();currentUser=data.session?.user||null;if(currentUser)dashboard();else login()}}catch(e){console.warn(e)}};s.onerror=()=>console.warn("Supabase CDN unavailable");document.head.appendChild(s)}
-login();setTimeout(loadSupabase,100);
+async function loadSupabase(){
+ const s=document.createElement("script");
+ s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js";
+ s.async=true;
+ s.onload=async()=>{
+  try{
+   if(!window.supabase?.createClient)throw new Error("Cliente de cuenta no disponible");
+   sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   const {data,error}=await withTimeout(sb.auth.getSession(),8000);
+   if(error)throw error;
+   const user=data?.session?.user||null;
+   if(user)await openSession(user);else login();
+  }catch(e){
+   console.error("Auth bootstrap:",e);
+   login();
+   const m=document.getElementById("msg");if(m){m.className="danger small";m.textContent="No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente."}
+  }
+ };
+ s.onerror=()=>{login();const m=document.getElementById("msg");if(m){m.className="danger small";m.textContent="No se pudo cargar el servicio de acceso."}};
+ document.head.appendChild(s);
+}
+login();loadSupabase();
