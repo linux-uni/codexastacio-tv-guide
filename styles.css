@@ -58,3 +58,15 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
  .login{margin:calc(5vh + env(safe-area-inset-top)) auto;min-height:auto;border-radius:26px;padding:26px 20px}.login .input{min-height:50px}.login .btn{min-height:50px}
 }
 @media(display-mode:standalone){body{user-select:none}.input{user-select:text}.footer{opacity:.55}}
+
+/* v30 Premium mobile reference */
+@media(max-width:760px){
+ .login{overflow:hidden;background:linear-gradient(180deg,#061936,#030b18 58%);box-shadow:0 24px 80px rgba(0,0,0,.65),0 0 45px rgba(20,112,255,.12)}
+ .login-hero{text-align:center;margin:-26px -20px 24px;padding:42px 18px 28px;background:radial-gradient(circle at 50% 20%,rgba(35,124,255,.35),transparent 44%),linear-gradient(180deg,#061c3c,#06142a)}
+ .cx-emblem{font-size:72px;line-height:1;font-weight:1000;font-style:italic;letter-spacing:-10px;background:linear-gradient(110deg,#4ce8ff,#457dff 38%,#c84dff 70%,#ff45b0);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 0 16px rgba(65,178,255,.42))}
+ .cx-login-title{font-size:27px;font-weight:900;letter-spacing:-1.4px}.cx-login-title span{color:#4fe8ff}.cx-login-sub{font-weight:900;letter-spacing:.38em;color:#9beaff;margin-top:3px}.cx-login-tags{font-size:9px;letter-spacing:.19em;color:#78a8d5;margin-top:14px}
+ .login h2{font-size:28px;margin:0 0 5px}.login .input{background:#091a34;border-color:#24476f}.login #loginBtn{background:linear-gradient(90deg,#bf32f5,#544cff,#03c6ef);border:0;box-shadow:0 10px 28px rgba(67,84,255,.3)}
+ .provider-logo{font-size:23px}.provider-event{border-color:rgba(47,137,255,.32)}
+ .channel-tile{background:linear-gradient(180deg,#071a34,#04101f)}.channel-logo{font-size:20px}
+ .mobile-nav{grid-template-columns:repeat(5,1fr)}.mobile-nav button{padding:3px}.mobile-nav button i{font-size:19px}
+}
