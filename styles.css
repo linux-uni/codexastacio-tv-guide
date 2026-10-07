@@ -70,3 +70,7 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
  .channel-tile{background:linear-gradient(180deg,#071a34,#04101f)}.channel-logo{font-size:20px}
  .mobile-nav{grid-template-columns:repeat(5,1fr)}.mobile-nav button{padding:3px}.mobile-nav button i{font-size:19px}
 }
+
+/* v31 Account + Super Admin */
+.login-actions{text-align:right;margin-top:10px}.link-btn{border:0;background:transparent;color:#66cfff;cursor:pointer;padding:6px 0}.account-panel{max-width:950px;margin:20px auto}.account-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.admin-users{display:grid;gap:10px}.admin-user{display:flex;justify-content:space-between;align-items:center;gap:14px}.user-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.danger-btn{border-color:#7e2639;color:#ff8ca0}
+@media(max-width:700px){.account-grid{grid-template-columns:1fr}.admin-user{align-items:stretch;flex-direction:column}.user-actions{justify-content:flex-start}.user-actions .btn{flex:1}.account-actions .btn{width:100%}}
