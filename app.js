@@ -148,7 +148,7 @@ function demoWhereToWatch(e){
  if(!out.length)add("DISH","Consultar programación");
  return out.slice(0,3);
 }
-function watchBadges(e){const list=e._managed?[e._channelName?{name:e._channelName,label:"Canal"}:null,e._providerName?{name:e._providerName,label:"Plataforma"}:null].filter(Boolean):demoWhereToWatch(e);return '<div class="watch-row"><span class="small muted">Dónde verlo:</span>'+list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join("")+'</div>'}
+function watchBadges(e){const channel=e._channelName||e.strTVStation||e.strChannel||e.strBroadcast||"";const platform=e._providerName||"";const known=!!channel||!!platform;const list=[channel?{name:channel,label:"Canal confirmado en ficha"}:null,platform?{name:platform,label:"Plataforma registrada"}:null].filter(Boolean);return '<div class="watch-row"><span class="small muted">📺 Dónde verlo:</span>'+(known?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):'<span class="watch-pill watch-unverified">Canal por confirmar</span>')+'</div>'}
 
 function setupSlider(){const hero=document.getElementById("sportsHero");if(!hero)return;document.getElementById("slidePrev").onclick=()=>showSlide(-1);document.getElementById("slideNext").onclick=()=>showSlide(1);loadSportsSlider()}
 function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=googleFeedLink(e);hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay">${matchupVisual(e)}${scoreBadge(e)}<span class="badge">${esc(key||e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}${feed?`<a class="google-feed-btn" href="${esc(feed)}" target="_blank" rel="noopener">Calendario ${esc(key)} ↗</a>`:""}</div>`}
@@ -275,4 +275,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=42").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=43").catch(e=>console.warn("SW:",e)))}
