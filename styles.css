@@ -143,3 +143,8 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .schedule-card .schedule-info .watch-row,.schedule-card .schedule-info .where-to-watch{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}
 .schedule-card .schedule-info .provider-badge,.schedule-card .schedule-info .watch-badge{max-width:100%;white-space:normal}
 @media(max-width:760px){.schedule-card{grid-template-columns:1fr!important}.schedule-card .matchup-visual.compact{min-height:150px}.schedule-card .schedule-info{padding:18px}.schedule-card .schedule-info h3{font-size:20px}}
+
+/* v41 football competitions and scores */
+.football-league-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0 20px;padding:15px;border:1px solid rgba(89,180,255,.2);border-radius:15px;background:rgba(8,25,50,.65)}
+.football-league-picker label{font-weight:800;color:#c9e7ff}.football-league-picker select{flex:1;min-width:180px;max-width:390px;border:1px solid rgba(89,180,255,.4);border-radius:10px;background:#0b203c;color:#fff;padding:11px 14px}
+.scoreline{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:8px 0}.match-score{font-size:24px;letter-spacing:.04em;color:#fff}.live-indicator{color:#fff;background:#d72440;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:900;letter-spacing:.06em;box-shadow:0 0 18px rgba(235,35,71,.35)}
