@@ -204,3 +204,13 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
  .schedule-card .sport-art-card{min-height:150px}
  .sport-art-card .sport-art-icon{font-size:120px}
 }
+
+
+/* v62 team crests inside digital platform cards */
+.provider-event .matchup-visual.compact{box-sizing:border-box;width:100%;min-width:0;max-width:none;margin:12px 0 10px;padding:10px 12px;gap:8px;border-radius:15px;background:radial-gradient(ellipse at 50% 50%,rgba(49,139,255,.16),transparent 64%),linear-gradient(135deg,rgba(8,19,39,.82),rgba(13,36,70,.6));}
+.provider-event .matchup-visual.compact .team-side{flex-direction:column;text-align:center;gap:6px}
+.provider-event .matchup-visual.compact .team-side:last-child{flex-direction:column;text-align:center}
+.provider-event .matchup-visual.compact .team-side img,.provider-event .matchup-visual.compact .team-fallback{width:54px;height:54px}
+.provider-event .matchup-visual.compact .team-side b{max-width:115px;font-size:11px;line-height:1.15}
+.provider-event .matchup-visual.compact .versus small{font-size:8px}
+.provider-event .matchup-visual.compact .versus strong{font-size:15px}
