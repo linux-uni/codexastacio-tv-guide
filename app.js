@@ -188,7 +188,8 @@ function bind(){
    if(state.sport==="Fútbol")footballLeague="Todas";
    if(canView("schedule")){
     state.view="schedule";
-    if(!wasSchedule)scheduleRange=state.sport==="Todos"?"week":"month";
+    if(state.sport==="Champions League")scheduleRange="month";
+    else if(!wasSchedule)scheduleRange=state.sport==="Todos"?"week":"month";
    }
    dashboard();
   });
