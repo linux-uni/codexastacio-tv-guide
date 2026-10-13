@@ -97,9 +97,9 @@ function providerCards(){return `<div id="providerGrid" class="grid provider-gri
 function netflixUpcomingEvent(){
  const today=dateKey();
  const schedule=[
-  {dateEvent:"2026-11-25",strEvent:"Green Bay Packers vs Los Angeles Rams",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"Hora por confirmar · RD",_netflixSchedule:true},
-  {dateEvent:"2026-12-25",strEvent:"Green Bay Packers vs Chicago Bears",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"2:00 p. m. RD",_netflixSchedule:true},
-  {dateEvent:"2026-12-25",strEvent:"Buffalo Bills vs Denver Broncos",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"5:30 p. m. RD",_netflixSchedule:true},
+  {dateEvent:"2026-11-25",strEvent:"Green Bay Packers vs Los Angeles Rams",strHomeTeam:"Los Angeles Rams",strAwayTeam:"Green Bay Packers",strHomeTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/lar.png",strAwayTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"Hora por confirmar · RD",_netflixSchedule:true},
+  {dateEvent:"2026-12-25",strEvent:"Green Bay Packers vs Chicago Bears",strHomeTeam:"Chicago Bears",strAwayTeam:"Green Bay Packers",strHomeTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/chi.png",strAwayTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/gb.png",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"2:00 p. m. RD",_netflixSchedule:true},
+  {dateEvent:"2026-12-25",strEvent:"Buffalo Bills vs Denver Broncos",strHomeTeam:"Denver Broncos",strAwayTeam:"Buffalo Bills",strHomeTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/den.png",strAwayTeamBadge:"https://a.espncdn.com/i/teamlogos/nfl/500/buf.png",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"5:30 p. m. RD",_netflixSchedule:true},
   {dateEvent:"2027-01-09",strEvent:"NFL Semana 18 • equipos por confirmar",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"2:00 p. m. RD",_netflixSchedule:true}
  ];
  return schedule.find(e=>e.dateEvent>=today)||null;
@@ -118,7 +118,8 @@ function providerEventCards(){
   const status=found?(found._netflixSchedule?"EN NETFLIX":"PRÓXIMO"):"SIN EVENTO CONFIRMADO";
   const title=found?.strEvent||(isNetflix?"No hay próximas transmisiones confirmadas":"Próximos eventos");
   const meta=found?providerEventDate(found):"La tarjeta se actualizará cuando haya un evento anunciado.";
-  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")).toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div><div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p></div></article>';
+  const matchup=found?matchupVisual(found,true):"";
+  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")).toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div>'+matchup+'<div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p></div></article>';
  }).join("");
 }
 
@@ -338,7 +339,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v60 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v62 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
