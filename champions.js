@@ -13,8 +13,10 @@ function canonicalChampionsPlatform(value){
  if(/netflix/i.test(name))return "Netflix";
  if(/paramount|\bcbs\b/i.test(name))return "Paramount+";
  if(/dazn/i.test(name))return "DAZN";
- if(/espn/i.test(name))return "Disney+ Premium";
- if(/disney/i.test(name))return "Disney+ Premium";
+ if(/espn\s*\+/i.test(name))return "ESPN+";
+ if(/\bespn\b/i.test(name))return "ESPN";
+ if(/disney\s*\+\s*premium/i.test(name))return "Disney+ Premium";
+ if(/disney/i.test(name))return "Disney+";
  if(/dish/i.test(name))return "DISH • "+name.replace(/dish\s*/i,"").trim();
  return name;
 }
@@ -37,7 +39,7 @@ function championsWatch(e){
   return href?'<a class="watch-pill" href="'+href+'" target="_blank" rel="noopener noreferrer">'+esc(name)+' ↗</a>':'<span class="watch-pill">'+esc(name)+'</span>';
  }).join("");
  return '<div class="watch-row"><span class="small muted">📺 Transmisión:</span>'+
- (badges||'<span class="watch-pill watch-unverified">Plataforma o canal pendiente de confirmar</span>')+
+ (badges||'<span class="watch-pill watch-unverified">Transmisión aún no informada por la fuente</span><a class="watch-pill" href="https://www.uefa.com/uefachampionsleague/fixtures-results/" target="_blank" rel="noopener noreferrer">Consultar calendario oficial ↗</a>')+
  '</div>';
 }
 function normalizeChampionsEvent(g){
