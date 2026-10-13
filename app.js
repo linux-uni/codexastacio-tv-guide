@@ -20,7 +20,7 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,state={view:"home",sport:"Todos"};
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,state={view:"home",sport:"Todos"};
 const GOOGLE_SPORT_FEEDS={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
  NFL:"https://www.google.com/search?q=NFL#sie=lg;/g/11ys7ykdbc;6;/m/059yj;mt;fp;1;;;;-1;",
@@ -86,7 +86,8 @@ const ESPN_SPORT_FEEDS={
  UFC:{paths:["mma/ufc"],sport:"MMA",league:"UFC"},
  NCAA:{paths:["football/college-football","basketball/mens-college-basketball","basketball/womens-college-basketball"],sport:"NCAA",league:"NCAA"},
  TENIS:{paths:["tennis/atp","tennis/wta"],sport:"Tennis",league:"Tennis"},
- F1:{paths:["racing/f1"],sport:"Formula 1",league:"Formula 1"}
+ F1:{paths:["racing/f1"],sport:"Formula 1",league:"Formula 1"},
+ NHL:{paths:["hockey/nhl"],sport:"Ice Hockey",league:"NHL"}
 };
 function espnNames(event,competition){
  const rows=[...(event?.broadcasts||[]),...(competition?.broadcasts||[]),...(competition?.geoBroadcasts||[])];
@@ -114,7 +115,7 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
   strHomeTeam:homeName,strAwayTeam:awayName,
   strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||"",
   strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||"",
-  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":"Basketball",
+  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":"Basketball",
   strTimestamp:valid?d.toISOString():"",dateEvent:valid?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d):"",
   strTime:valid?d.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
   strStatus:type.state==="in"?"LIVE":type.completed?"FINAL":type.detail||type.name||"",
@@ -150,7 +151,32 @@ function footballFilter(e){return sportMatches(e,"Fútbol")&&(footballLeague==="
 function footballLeagueSelector(){if(state.sport!=="Fútbol")return "";const found=[...new Set(scheduleEvents.filter(e=>sportMatches(e,"Fútbol")).map(footballCompetition))];const leagues=[...new Set(["Todas",...FOOTBALL_COMPETITIONS,...found])];return '<div class="football-league-picker"><label for="footballLeague">Liga o copa</label><select id="footballLeague">'+leagues.map(x=>'<option value="'+esc(x)+'"'+(footballLeague===x?' selected':'')+'>'+esc(x)+'</option>').join("")+'</select></div>'}
 function eventLive(e){const s=String(e.strStatus||"").toUpperCase(),p=String(e.strProgress||"");return /^(1H|2H|HT|ET|PEN|LIVE|IN PLAY|Q[1-4])$/.test(s)||/^\\d{1,3}(\\+\\d+)?['′]?$/.test(p)}
 function scoreBadge(e){const h=e.intHomeScore,a=e.intAwayScore,has=h!==null&&h!==undefined&&h!==""&&a!==null&&a!==undefined&&a!=="";return '<div class="scoreline">'+(eventLive(e)?'<span class="live-indicator">● EN VIVO</span>':"")+(has?'<strong class="match-score">'+esc(h)+' - '+esc(a)+'</strong>':"")+(e.strProgress?'<span class="muted small">'+esc(e.strProgress)+'</span>':"")+'</div>'}
-async function nhlGames(offsets){const dates=offsets.map(n=>dateKey(n));const results=await Promise.all(dates.map(async date=>{const response=await fetch("https://api-web.nhle.com/v1/score/"+date);if(!response.ok)throw Error("NHL HTTP "+response.status);return response.json()}));const games=results.flatMap(x=>x.games||[]);return [...new Map(games.map(g=>{const h=g.homeTeam||{},a=g.awayTeam||{},state=String(g.gameState||"").toUpperCase(),live=["LIVE","CRIT"].includes(state),done=["OFF","FINAL"].includes(state);const name=t=>t.placeName?.default&&t.commonName?.default?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.gameDate||String(g.startTimeUTC||"").slice(0,10),strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};return [g.id,ev]})).values()]}
+async function nhlGames(offsets){
+ const dates=offsets.map(n=>dateKey(n)),queue=[...dates],results=[];
+ async function worker(){
+  while(queue.length){
+   const date=queue.shift();
+   try{
+    const response=await fetch("https://api-web.nhle.com/v1/score/"+date,{signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw Error("NHL HTTP "+response.status);
+    results.push(await response.json());
+   }catch(e){console.warn("NHL official feed "+date,e)}
+  }
+ }
+ await Promise.all(Array.from({length:Math.min(5,dates.length)},worker));
+ const games=results.flatMap(x=>x.games||[]);
+ const official=[...new Map(games.map(g=>{
+  const h=g.homeTeam||{},a=g.awayTeam||{},state=String(g.gameState||"").toUpperCase(),live=["LIVE","CRIT"].includes(state),done=["OFF","FINAL"].includes(state);
+  const name=t=>t.placeName?.default&&t.commonName?.default?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";
+  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.gameDate||String(g.startTimeUTC||"").slice(0,10),strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
+  return [g.id,ev]
+ })).values()];
+ let backup=[];
+ try{backup=await espnGames(offsets,"NHL")}catch(e){console.warn("NHL ESPN fallback",e)}
+ const key=e=>String(e.dateEvent||"")+"|"+[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(x=>String(x).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"")).sort().join("|");
+ const seen=new Set(official.map(key));
+ return [...official,...backup.filter(e=>{const k=key(e);if(seen.has(k))return false;seen.add(k);return true})];
+}
 function scheduleCards(){const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():"");if(!scheduleEvents.some(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return intro+'<div class="notice">'+(state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos de ')+esc(state.sport)+' en este período. Prueba otro período o consulta los próximos 30 días.</div>';return intro+'<div class="schedule-list">'+scheduleEvents.filter(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)).map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+watchBadges(e)+'</div></article>').join("")+'</div>'}
 
 function setupScheduleAutoRefresh(){
@@ -175,7 +201,7 @@ async function loadSchedule(silent=false){
  const includeUcl=allSports||selected==="Fútbol"||selected==="Champions League";
  const includeMlb=allSports||selected==="MLB";
  const includeNhl=allSports||selected==="NHL";
- const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS):
+ const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"):
   selected==="NFL"?["NFL"]:selected==="NBA"?["NBA"]:selected==="UFC/MMA"?["UFC"]:
   selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:[];
  try{
@@ -263,7 +289,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v54 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v55 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -309,10 +335,65 @@ function demoWhereToWatch(e){
 function nhlGoogleLink(e){if(!sportMatches(e,"NHL"))return "";const q=encodeURIComponent("NHL "+(e.strAwayTeam||"")+" "+(e.strHomeTeam||"")+" "+(e.dateEvent||""));return '<a class="watch-pill" href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener noreferrer" aria-label="Ver resultados NHL en Google">🏒 Resultados en Google ↗</a>'}
 function watchBadges(e){if(isChampionsLeague(e))return championsWatch(e);const channel=e._channelName||e.strTVStation||e.strChannel||e.strBroadcast||"";const platform=e._providerName||"";const options=[...(e._watchOptions||[])].filter(x=>x&&x!==channel);const list=[channel?{name:channel,label:e._espn?"Feed ESPN; disponibilidad regional puede variar":"Canal confirmado"}:null,platform?{name:platform,label:"Plataforma registrada"}:null,...options.map(name=>({name,label:"Transmisión en la fuente ESPN"}))].filter(Boolean);const known=list.length>0;return '<div class="watch-row"><span class="small muted">📺 Dónde verlo:</span>'+(known?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):'<span class="watch-pill watch-unverified">Canal por confirmar</span>')+nhlGoogleLink(e)+'</div>'}
 
-function setupSlider(){const hero=document.getElementById("sportsHero");if(!hero)return;document.getElementById("slidePrev").onclick=()=>showSlide(-1);document.getElementById("slideNext").onclick=()=>showSlide(1);loadSportsSlider()}
-function showSlide(step=0){if(!sliderEvents.length)return;slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;const e=sliderEvents[slideIndex],hero=document.getElementById("sportsHero");if(!hero)return;const img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=googleFeedLink(e);hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");hero.style.backgroundImage=img?`linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("${img}")`:"";hero.innerHTML=`<div class="hero-overlay">${matchupVisual(e)}${scoreBadge(e)}<span class="badge">${esc(key||e.strSport||"DEPORTE")}</span><h1>${esc(e.strEvent||e.title||"Próximo evento")}</h1><p>${esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))}</p>${watchBadges(e)}${feed?`<a class="google-feed-btn" href="${esc(feed)}" target="_blank" rel="noopener">Calendario ${esc(key)} ↗</a>`:""}</div>`}
-
-async function loadSportsSlider(){try{const dates=[0,1,2].map(n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)});const results=await Promise.all(dates.map(d=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+d).then(r=>r.ok?r.json():null).catch(()=>null)));sliderEvents=results.flatMap(x=>x?.events||[]).filter(e=>e.strEvent).sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,18);if(sliderEvents.length){showSlide();renderProviders();dashboardChannelRefresh();clearInterval(sliderTimer);sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1);else clearInterval(sliderTimer)},6500)}}catch(e){console.warn("Sports slider unavailable",e)}}
+function setupSlider(){
+ const hero=document.getElementById("sportsHero");if(!hero)return;
+ const prev=document.getElementById("slidePrev"),next=document.getElementById("slideNext");
+ if(prev)prev.onclick=()=>showSlide(-1);if(next)next.onclick=()=>showSlide(1);
+ if(!sliderRefreshTimer)sliderRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible"&&document.getElementById("sportsHero"))loadSportsSlider(true)},300000);
+ if(!sliderVisibilityBound){
+  sliderVisibilityBound=true;
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&document.getElementById("sportsHero")&&(sliderLoadedDay!==dateKey(0)||Date.now()-sliderLastRefresh>300000))loadSportsSlider(true)});
+  window.addEventListener("online",()=>{if(document.getElementById("sportsHero"))loadSportsSlider(true)});
+ }
+ loadSportsSlider(false);
+}
+function showSlide(step=0){
+ const hero=document.getElementById("sportsHero");if(!hero)return;
+ if(!sliderEvents.length){
+  hero.className="hero-slide";hero.style.backgroundImage="";
+  hero.innerHTML='<div class="hero-overlay"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h1>Sin eventos deportivos para hoy</h1><p>La agenda se renueva automáticamente con los eventos del día.</p></div>';
+  return;
+ }
+ slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
+ const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=googleFeedLink(e);
+ hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");
+ hero.style.backgroundImage=img?'linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("'+esc(img)+'")':"";
+ hero.innerHTML='<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario '+esc(key)+' ↗</a>':"")+'</div>';
+}
+function sliderLocalDate(e){
+ const timestamp=e?.strTimestamp||e?.dateEvent;if(!timestamp)return "";
+ const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
+ return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d);
+}
+function sliderEventKey(e){
+ const clean=x=>String(x||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const league=leagueKey(e)||String(e.strLeague||e.strSport||"").toLowerCase();
+ const teams=[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(clean).sort();
+ return sliderLocalDate(e)+"|"+league+"|"+(teams.length===2?teams.join("|"):clean(e.strEvent));
+}
+async function loadSportsSlider(force=false){
+ const today=dateKey(0);
+ if(sliderLoading||(!force&&sliderLoadedDay===today&&Date.now()-sliderLastRefresh<300000))return;
+ sliderLoading=true;
+ try{
+  const keys=Object.keys(ESPN_SPORT_FEEDS).filter(k=>k!=="NHL");
+  const [general,mlb,nhl,ucl,espn]=await Promise.all([
+   fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+today,{signal:AbortSignal.timeout(12000)}).then(r=>r.ok?r.json():null).then(x=>x?.events||[]).catch(e=>{console.warn("Sports day feed",e);return []}),
+   mlbGames([0]).catch(e=>{console.warn("MLB day feed",e);return []}),
+   nhlGames([0]).catch(e=>{console.warn("NHL day feed",e);return []}),
+   championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
+   Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
+  ]);
+  const events=[...general,...mlb,...nhl,...ucl,...espn].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const seen=new Set();
+  sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
+   .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,36);
+  slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
+  showSlide();renderProviders();dashboardChannelRefresh();
+  if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
+ }catch(e){console.warn("Sports day slider unavailable",e);showSlide()}
+ finally{sliderLoading=false}
+}
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
 async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
