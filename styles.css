@@ -214,3 +214,14 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .provider-event .matchup-visual.compact .team-side b{max-width:115px;font-size:11px;line-height:1.15}
 .provider-event .matchup-visual.compact .versus small{font-size:8px}
 .provider-event .matchup-visual.compact .versus strong{font-size:15px}
+
+
+/* v63 Match reminders */
+.reminder-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.reminder-btn{min-height:40px;padding:9px 13px;border:1px solid rgba(94,169,255,.32);border-radius:12px;background:rgba(13,42,78,.72);color:#ddecff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.reminder-btn:hover{transform:translateY(-1px);border-color:rgba(91,191,255,.72);background:rgba(21,83,143,.72)}
+.reminder-btn.active{border-color:rgba(67,220,164,.48);background:rgba(16,116,83,.28);color:#a8ffdc}
+.reminder-btn.calendar{background:rgba(6,20,42,.66);color:#9fc4ef}
+.reminder-toast{position:fixed;z-index:500;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;width:max-content;max-width:min(92vw,460px);padding:13px 17px;border:1px solid rgba(85,171,255,.34);border-radius:14px;background:rgba(5,19,41,.96);box-shadow:0 14px 40px rgba(0,0,0,.4);color:#ecf6ff;font-size:13px;font-weight:700;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,-8px);transition:opacity .18s ease,transform .18s ease;backdrop-filter:blur(14px)}
+.reminder-toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:760px){.reminder-actions{gap:7px}.reminder-btn{flex:1 1 auto;min-height:42px;padding:10px;font-size:11px}.schedule-info .reminder-actions{margin-top:12px}}
