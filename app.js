@@ -263,8 +263,6 @@ async function loadSchedule(silent=false){
 }
 
 function heroSlider(){return `<section class="sports-slider"><button id="slidePrev" class="slide-btn prev" aria-label="Anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="hero-overlay"><span class="badge">SPORTS</span><h1>Próximos eventos deportivos</h1><p>Cargando programación…</p></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente">›</button></section>`}
-function championsFeature(){return '<section class="panel ucl-feature"><div><span class="ucl-kicker">UEFA • TEMPORADA 2026/27</span><h2>UEFA Champions League</h2><p class="muted">Calendario de partidos, resultados y horarios de República Dominicana (UTC−4).</p><p class="small">Cada partido indicará su plataforma de streaming o canal DISH cuando el dato esté disponible.</p><a class="watch-pill" href="https://www.uefa.com/uefachampionsleague/fixtures-results/" target="_blank" rel="noopener noreferrer">Fixture oficial UEFA ↗</a></div><button class="btn primary ucl-open" data-ucl-open>Ver calendario y partidos →</button></section>'}
-
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
  const filteredEvents=state.sport==="Todos"?events:events.filter(e=>e.sport===state.sport);
@@ -277,7 +275,7 @@ function content(){
  const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>';
  const providerSection=canView("providers")?'<h2>Plataformas digitales</h2>'+providerCards():"";
  const channelSection=canView("channels")?'<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>'+channelFilters()+channelCards(filteredChannels):"";
- return heroSlider()+(state.sport==="Todos"?championsFeature():"")+finder+chips()+providerSection+channelSection
+ return heroSlider()+finder+chips()+providerSection+channelSection
 }
 
 function mobileNav(){
@@ -289,7 +287,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v56 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v57 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
