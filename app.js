@@ -96,7 +96,7 @@ function detectInstallDevice(){
  const ua=navigator.userAgent||"",platform=navigator.userAgentData?.platform||navigator.platform||"";
  const ios=/iPhone|iPad|iPod/i.test(ua)||(/MacIntel/i.test(platform)&&navigator.maxTouchPoints>1);
  const android=/Android/i.test(ua),mobile=ios||android||!!navigator.userAgentData?.mobile;
- const browser=/Edg\//i.test(ua)?"Microsoft Edge":/SamsungBrowser/i.test(ua)?"Samsung Internet":/Brave/i.test(ua)?"Brave":/CriOS|Chrome\//i.test(ua)?"Chrome":/FxiOS|Firefox\//i.test(ua)?"Firefox":/Safari/i.test(ua)?"Safari":"Navegador web";
+ const browser=navigator.brave?"Brave":/Edg\//i.test(ua)?"Microsoft Edge":/SamsungBrowser/i.test(ua)?"Samsung Internet":/Brave/i.test(ua)?"Brave":/CriOS|Chrome\//i.test(ua)?"Chrome":/FxiOS|Firefox\//i.test(ua)?"Firefox":/Safari/i.test(ua)?"Safari":"Navegador web";
  let installed=false;try{installed=matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches||navigator.standalone===true}catch{}
  return {ios,android,mobile,installed,browser,device:ios?(/iPad/i.test(ua)||(/MacIntel/i.test(platform)&&navigator.maxTouchPoints>1)?"iPad":"iPhone"):android?"Android":mobile?"Dispositivo móvil":"Computadora"};
 }
@@ -106,7 +106,7 @@ function installPanel(){
  let steps;
  if(d.installed)steps='<p>Abre la app desde el ícono de TV Listing en la pantalla de inicio o en el menú de aplicaciones.</p>';
  else if(d.ios)steps='<ol><li>Abre esta página en <strong>Safari</strong> si todavía estás en otro navegador o dentro de otra app.</li><li>Toca <strong>Compartir</strong> (□↑) en el menú del navegador.</li><li>Selecciona <strong>Añadir a pantalla de inicio</strong> y luego toca <strong>Añadir</strong>.</li></ol>';
- else if(d.android)steps='<ol><li>Si aparece el botón de instalación, tócalo y confirma.</li><li>Si no aparece, abre el menú <strong>⋮</strong> de Chrome y elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li></ol>';
+ else if(d.android)steps='<ol><li>Si aparece el botón de instalación, tócalo y confirma.</li><li>Si no aparece, abre el menú <strong>⋮</strong> del navegador y elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li></ol>';
  else if(!d.mobile)steps='<ol><li>Usa el botón de instalación si está disponible.</li><li>También puedes abrir el menú de Chrome o Edge y elegir <strong>Instalar TV Listing App</strong>.</li></ol>';
  else steps='<ol><li>Abre el menú de tu navegador.</li><li>Selecciona <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li></ol>';
  const note=!d.installed&&!deferredInstallPrompt?'<p class="small muted install-note">El navegador todavía no ofrece el botón directo. Usa los pasos indicados; la opción puede aparecer después de abrir la página en el navegador completo.</p>':"";
@@ -465,7 +465,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v65 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v66 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -718,4 +718,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=65").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=66").catch(e=>console.warn("SW:",e)))}
