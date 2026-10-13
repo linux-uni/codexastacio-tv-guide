@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "CodeXaStacio TV Guide",
-  "short_name": "CX TV Guide",
+  "name": "TV Listing App",
+  "short_name": "TV Listing",
   "description": "Tu guía deportiva para canales, programación y plataformas de streaming.",
   "start_url": "./?source=pwa",
   "scope": "./",
