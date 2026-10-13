@@ -289,7 +289,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v55 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v56 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -361,8 +361,8 @@ function showSlide(step=0){
  hero.innerHTML='<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario '+esc(key)+' ↗</a>':"")+'</div>';
 }
 function sliderLocalDate(e){
- const timestamp=e?.strTimestamp||e?.dateEvent;if(!timestamp)return "";
- const d=new Date(timestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
+ if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
+ const d=new Date(e.strTimestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
  return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d);
 }
 function sliderEventKey(e){
