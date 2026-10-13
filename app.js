@@ -303,10 +303,14 @@ function checkScheduledReminders(){
   if(!r.notified&&now>=start-5*60*1000){
    r.notified=true;changed=true;
    const title="Comienza en 5 minutos: "+r.title,body=[r.league,r.platform].filter(Boolean).join(" • ");
-   try{
-    if(navigator.serviceWorker?.controller)navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body,tag:r.id,data:{url:location.href}})).catch(()=>new Notification(title,{body,tag:r.id}));
-    else new Notification(title,{body,tag:r.id});
-   }catch(err){console.warn("No se pudo mostrar la notificación",err)}
+   const options={body,tag:r.id,data:{url:location.href}};
+   const deliver=async()=>{
+    try{
+     if("serviceWorker" in navigator){const reg=await navigator.serviceWorker.ready;if(reg&&typeof reg.showNotification==="function"){await reg.showNotification(title,options);return}}
+     new Notification(title,options);
+    }catch(err){console.warn("No se pudo mostrar la notificación",err)}
+   };
+   deliver();
   }
   keep.push(r);
  }
@@ -685,4 +689,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=54").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=64").catch(e=>console.warn("SW:",e)))}
