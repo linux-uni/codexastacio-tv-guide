@@ -305,8 +305,11 @@ const ESPN_SPORT_FEEDS={
 };
 function espnNames(event,competition){
  const rows=[...(event?.broadcasts||[]),...(competition?.broadcasts||[]),...(competition?.geoBroadcasts||[])];
- return [...new Set(rows.flatMap(row=>[row?.name,row?.shortName,row?.media?.name,row?.media?.shortName,...(row?.names||[])])
-  .filter(Boolean).map(x=>String(x).trim()).filter(Boolean))];
+ return [...new Set(rows.flatMap(row=>[
+  row?.name,row?.shortName,row?.media?.name,row?.media?.shortName,row?.network?.name,row?.network?.shortName,
+  ...(Array.isArray(row?.names)?row.names:[]),
+  ...(Array.isArray(row?.networks)?row.networks.flatMap(network=>[network?.name,network?.shortName,network?.displayName]):[])
+ ]).filter(Boolean).map(x=>String(x).trim()).filter(Boolean))];
 }
 function normalizeEspnCompetition(event,competition,feedKey,path){
  const contestants=competition?.competitors||event?.competitors||[];
@@ -611,7 +614,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v67 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v68 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -671,22 +674,27 @@ function streamPlatform(value){
  if(/dazn/i.test(name))return "DAZN";
  if(/netflix/i.test(name))return "Netflix";
  if(/paramount\+?/i.test(name))return "Paramount+";
- if(/disney\s*\+?/i.test(name))return "Disney+ Premium";
- if(/espn/i.test(name))return "Disney+ Premium";
+ if(/disney\s*\+\s*premium/i.test(name))return "Disney+ Premium";
+ if(/disney\s*\+/i.test(name))return "Disney+";
+ if(/espn\s*\+/i.test(name))return "ESPN+";
+ if(/\bespn\b/i.test(name))return "ESPN";
  return "";
 }
 function watchBadges(e){
  if(isChampionsLeague(e))return championsWatch(e);
  const sourceValues=[...(Array.isArray(e._watchOptions)?e._watchOptions:[]),e._providerName,e.strTVStation,e.strChannel,e.strBroadcast].filter(Boolean).flatMap(x=>String(x).split(/[,;|]/).map(y=>y.trim()).filter(Boolean));
  const platforms=[...new Set(sourceValues.map(streamPlatform).filter(Boolean))];
- const rows=platforms.map(name=>({name,label:name==="Disney+ Premium"?"ESPN en streaming · revisar programación local":"Streaming"}));
+ const platformLabel=name=>name==="ESPN"?"Canal/señal informada por el feed; streaming depende del país":name==="ESPN+"?"Streaming; disponibilidad regional por confirmar":name==="Disney+ Premium"?"Streaming":"Streaming";
+ const rows=platforms.map(name=>({name,label:platformLabel(name)}));
  const dishChannel=e._channelName;
  if(dishChannel)rows.push({name:dishChannel,label:"Canal registrado en DISH"});
  const knownNetworks=[...new Set(sourceValues.filter(x=>!streamPlatform(x)))];
- if(!dishChannel)knownNetworks.forEach(name=>rows.push({name,label:e._espn?"Señal ESPN · streaming según disponibilidad local":"Señal indicada por la fuente"}));
+ if(!dishChannel)knownNetworks.forEach(name=>rows.push({name,label:"Señal informada por la fuente"}));
  if(e._providerName&&!streamPlatform(e._providerName)&&!/^dish$/i.test(e._providerName))rows.push({name:e._providerName,label:"Plataforma registrada"});
  const list=[...new Map(rows.map(x=>[x.name.toLowerCase(),x])).values()];
- return '<div class="watch-row"><span class="small muted">📺 Dónde verlo / streaming:</span>'+(list.length?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):'<span class="watch-pill watch-unverified">Plataforma de streaming pendiente de confirmar</span>')+'</div>';
+ const official=officialScheduleLink(e);
+ const missing=official?'<span class="watch-pill watch-unverified">La fuente no informa la transmisión</span><a class="watch-pill" href="'+esc(official)+'" target="_blank" rel="noopener noreferrer">Consultar guía oficial ↗</a>':'<span class="watch-pill watch-unverified">Transmisión aún no informada por la fuente</span>';
+ return '<div class="watch-row"><span class="small muted">📺 Dónde verlo / streaming:</span>'+(list.length?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):missing)+'</div>';
 }
 
 function setupSlider(){
@@ -864,4 +872,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=67").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=68").catch(e=>console.warn("SW:",e)))}
