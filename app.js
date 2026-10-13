@@ -20,7 +20,7 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,state={view:"home",sport:"Todos"};
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,state={view:"home",sport:"Todos"};
 const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
  NFL:"https://www.nfl.com/schedules/",
@@ -229,7 +229,100 @@ async function nhlGames(offsets){
  const seen=new Set(official.map(key));
  return [...official,...backup.filter(e=>{const k=key(e);if(seen.has(k))return false;seen.add(k);return true})];
 }
-function scheduleCards(){const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():"");if(!scheduleEvents.some(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return intro+'<div class="notice">'+(state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos de ')+esc(state.sport)+' en este período. Prueba otro período o consulta los próximos 30 días.</div>';return intro+'<div class="schedule-list">'+scheduleEvents.filter(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)).map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+watchBadges(e)+'</div></article>').join("")+'</div>'}
+const REMINDER_STORAGE_PREFIX="cx-tv-reminders-v1:";
+function reminderStorageKey(){return REMINDER_STORAGE_PREFIX+String(currentUser?.id||"guest")}
+function readSavedReminders(){
+ try{const x=JSON.parse(localStorage.getItem(reminderStorageKey())||"[]");return Array.isArray(x)?x.filter(r=>r&&r.id&&r.startAt):[]}catch{return []}
+}
+function writeSavedReminders(rows){try{localStorage.setItem(reminderStorageKey(),JSON.stringify(rows))}catch(e){console.warn("No se pudo guardar el recordatorio",e)}}
+function eventStartInstant(e){
+ const timestamp=String(e?.strTimestamp||e?.starts_at||"");
+ if(timestamp&&/[zZ]|[+-]\d{2}:?\d{2}$/.test(timestamp)){
+  const d=new Date(timestamp);if(Number.isFinite(d.getTime()))return d;
+ }
+ const date=String(e?.dateEvent||"").slice(0,10),raw=String(e?.strTime||"");
+ const m=raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?/i);
+ if(date&&m){
+  let h=Number(m[1]);const minute=Number(m[2]),second=Number(m[3]||0),period=String(m[4]||"").toLowerCase().replace(/\s|\./g,"");
+  if(period.startsWith("p")&&h<12)h+=12;if(period.startsWith("a")&&h===12)h=0;
+  const d=new Date(date+"T"+String(h).padStart(2,"0")+":"+String(minute).padStart(2,"0")+":"+String(second).padStart(2,"0")+"-04:00");
+  if(Number.isFinite(d.getTime()))return d;
+ }
+ if(timestamp){
+  const normalized=/^\d{4}-\d{2}-\d{2}T/.test(timestamp)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(timestamp)?timestamp+"-04:00":timestamp;
+  const d=new Date(normalized);if(Number.isFinite(d.getTime()))return d;
+ }
+ return null;
+}
+function reminderEventId(e,start){
+ const raw=String(e?.idEvent||e?.id||((e?.strEvent||"partido")+"|"+start.toISOString()));
+ return raw.toLowerCase().replace(/[^a-z0-9_-]+/g,"-").slice(0,110);
+}
+function showReminderToast(message){
+ let node=document.getElementById("reminderToast");
+ if(!node){node=document.createElement("div");node.id="reminderToast";node.className="reminder-toast";node.setAttribute("role","status");document.body.appendChild(node)}
+ node.textContent=message;node.classList.add("show");
+ clearTimeout(node._hideTimer);node._hideTimer=setTimeout(()=>node.classList.remove("show"),4200);
+}
+function reminderActions(e){
+ const start=eventStartInstant(e),status=String(e?.strStatus||"").toLowerCase();
+ if(!start||start.getTime()<=Date.now()||/live|final|finished|completed/.test(status))return "";
+ const id=reminderEventId(e,start);reminderEventIndex.set(id,e);
+ const active=readSavedReminders().some(r=>r.id===id);
+ return '<div class="reminder-actions"><button type="button" class="reminder-btn '+(active?"active":"")+'" data-reminder-action="toggle" data-reminder-id="'+esc(id)+'" aria-pressed="'+active+'">'+(active?"🔔 Aviso activo":"🔔 Recordarme · 5 min antes")+'</button><button type="button" class="reminder-btn calendar" data-reminder-action="calendar" data-reminder-id="'+esc(id)+'">＋ Calendario</button></div>';
+}
+function setupReminderInteractions(){
+ if(reminderInteractionsBound)return;
+ reminderInteractionsBound=true;
+ document.addEventListener("click",async event=>{
+  const button=event.target.closest("[data-reminder-action]");if(!button)return;
+  const id=button.dataset.reminderId,match=reminderEventIndex.get(id),action=button.dataset.reminderAction;
+  if(!match){showReminderToast("Actualiza la agenda y vuelve a intentarlo.");return}
+  const start=eventStartInstant(match);if(!start){showReminderToast("Este partido no tiene hora de inicio disponible.");return}
+  const record={id,title:match.strEvent||match.title||"Partido deportivo",startAt:start.toISOString(),league:match.strLeague||match.strSport||"Deporte",platform:match.strTVStation||match._providerName||""};
+  if(action==="calendar"){downloadReminderCalendar(record);return}
+  const rows=readSavedReminders(),index=rows.findIndex(r=>r.id===id);
+  if(index>=0){rows.splice(index,1);writeSavedReminders(rows);button.classList.remove("active");button.setAttribute("aria-pressed","false");button.textContent="🔔 Recordarme · 5 min antes";showReminderToast("Recordatorio eliminado.");return}
+  if(!("Notification" in window)){showReminderToast("Este navegador no permite notificaciones. Usa «Calendario» para recibir el aviso.");return}
+  let permission=Notification.permission;
+  if(permission==="default"){try{permission=await Notification.requestPermission()}catch{permission="denied"}}
+  if(permission!=="granted"){showReminderToast("Activa las notificaciones del navegador o usa «Calendario».");return}
+  rows.push(record);writeSavedReminders(rows);button.classList.add("active");button.setAttribute("aria-pressed","true");button.textContent="🔔 Aviso activo";
+  checkScheduledReminders();showReminderToast("Te avisaremos 5 minutos antes del partido.");
+ });
+ document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkScheduledReminders()});
+ window.addEventListener("focus",checkScheduledReminders);
+ if(!reminderTicker)reminderTicker=setInterval(checkScheduledReminders,15000);
+ checkScheduledReminders();
+}
+function checkScheduledReminders(){
+ if(!("Notification" in window)||Notification.permission!=="granted")return;
+ const now=Date.now(),rows=readSavedReminders(),keep=[];let changed=false;
+ for(const r of rows){
+  const start=new Date(r.startAt).getTime();if(!Number.isFinite(start)||now>=start){changed=true;continue}
+  if(!r.notified&&now>=start-5*60*1000){
+   r.notified=true;changed=true;
+   const title="Comienza en 5 minutos: "+r.title,body=[r.league,r.platform].filter(Boolean).join(" • ");
+   try{
+    if(navigator.serviceWorker?.controller)navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body,tag:r.id,data:{url:location.href}})).catch(()=>new Notification(title,{body,tag:r.id}));
+    else new Notification(title,{body,tag:r.id});
+   }catch(err){console.warn("No se pudo mostrar la notificación",err)}
+  }
+  keep.push(r);
+ }
+ if(changed)writeSavedReminders(keep);
+}
+function icsEscape(value){return String(value||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n")}
+function icsUtc(date){return date.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"")}
+function downloadReminderCalendar(record){
+ const start=new Date(record.startAt);if(!Number.isFinite(start.getTime())){showReminderToast("No se pudo leer la hora del partido.");return}
+ const end=new Date(start.getTime()+2*60*60*1000),now=new Date();
+ const rows=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//CodeXaStacio//TV Listing App//ES","CALSCALE:GREGORIAN","BEGIN:VEVENT","UID:"+icsEscape(record.id)+"@tv-listing-app","DTSTAMP:"+icsUtc(now),"DTSTART:"+icsUtc(start),"DTEND:"+icsUtc(end),"SUMMARY:"+icsEscape(record.title),"DESCRIPTION:"+icsEscape([record.league,record.platform].filter(Boolean).join(" • ")),"BEGIN:VALARM","TRIGGER:-PT5M","ACTION:DISPLAY","DESCRIPTION:El partido empieza en 5 minutos","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+ const blob=new Blob([rows],{type:"text/calendar;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=(record.title||"partido").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".ics";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ showReminderToast("Calendario descargado con aviso 5 minutos antes. Ábrelo para guardarlo.");
+}
+function scheduleCards(){const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():"");if(!scheduleEvents.some(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return intro+'<div class="notice">'+(state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos de ')+esc(state.sport)+' en este período. Prueba otro período o consulta los próximos 30 días.</div>';return intro+'<div class="schedule-list">'+scheduleEvents.filter(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)).map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+watchBadges(e)+reminderActions(e)+'</div></article>').join("")+'</div>'}
 
 function setupScheduleAutoRefresh(){
  if(!scheduleRefreshTimer)scheduleRefreshTimer=setInterval(()=>{
@@ -339,11 +432,12 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v62 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v63 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
 function bind(){
+ setupReminderInteractions();
  const accountBtn=document.getElementById("account"),menu=document.getElementById("accountMenu");
  if(accountBtn&&menu){accountBtn.onclick=e=>{e.stopPropagation();menu.classList.toggle("hidden");accountBtn.setAttribute("aria-expanded",String(!menu.classList.contains("hidden")))};menu.onclick=e=>e.stopPropagation();setTimeout(()=>document.addEventListener("click",()=>{menu.classList.add("hidden");accountBtn.setAttribute("aria-expanded","false")},{once:true}),0)}
  const profileBtn=document.getElementById("menuProfile");if(profileBtn)profileBtn.onclick=accountPanel;
@@ -439,7 +533,7 @@ function showSlide(step=0){
  const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=officialScheduleLink(e);
  hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"")+(img?"":" hero-fallback");
  hero.style.backgroundImage=img?'linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("'+esc(img)+'")':"";
- hero.innerHTML=(img?"":sportArtwork(e,"hero"))+'<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
+ hero.innerHTML=(img?"":sportArtwork(e,"hero"))+'<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
 }
 function sliderLocalDate(e){
  if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
