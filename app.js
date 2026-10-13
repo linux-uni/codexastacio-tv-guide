@@ -20,7 +20,7 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,state={view:"home",sport:"Todos"};
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,scheduleFilters={league:"",team:"",platform:"",favoritesOnly:false},favoriteInteractionsBound=false,state={view:"home",sport:"Todos"};
 const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
  NFL:"https://www.nfl.com/schedules/",
@@ -159,6 +159,139 @@ function channelEvent(c){return sliderEvents.find(x=>c.sports.some(s=>{const a=S
 function channelCards(list){let rows=list.map(c=>({c,e:channelEvent(c)}));if(channelFilter!=="Todos"&&channelFilter!=="Próximos")rows=rows.filter(({c})=>c.sports.includes(channelFilter));return `<div class="channel-showcase">${rows.map(({c,e},i)=>{const sport=e?.strSport||c.sports[0],img=e&&(e.strThumb||e.strPoster||e.strFanart);return `<article class="channel-tile searchable" data-search="${esc((c.name+" "+c.n+" "+c.sports.join(" ")+" "+(e?.strEvent||"")).toLowerCase())}" ${img?`style="--channel-bg:url('${esc(img)}')"`:""}><div class="channel-art"></div><div class="channel-body"><div class="channel-head"><div class="channel-identity"><span class="channel-logo">${esc(c.name)}</span><span class="channel-number">CH ${esc(c.n)}</span></div>${sportMark(sport)}</div><span class="next-badge">PRÓXIMO</span><h3>${esc(e?.strEvent||c.sports.slice(0,2).join(" • "))}</h3><div class="channel-meta">${esc(e?[e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "):"Programación deportiva")}</div><div class="progress-track"><i style="width:${25+(i%4)*15}%"></i></div><div class="now-next"><span><b>Ahora</b> Guía deportiva</span><span><b>A continuación</b> ${esc(e?.strEvent||"Por actualizar")}</span></div></div></article>`}).join("")}</div>`}
 function eventCards(list){return `<div class="grid">${list.map(e=>`<article class="card event searchable" data-search="${esc((e.sport+" "+e.title+" "+e.network+" "+e.channel).toLowerCase())}"><div class="row"><strong>${esc(e.sport)}</strong><span class="badge">${esc(e.status)}</span></div><h3>${esc(e.title)}</h3><div class="small muted">📺 ${esc(e.network)}</div><div class="notice small">DISH: ${esc(e.channel)} • horarios por TV listing</div></article>`).join("")}</div>`}
 function dateKey(offset=0){const d=new Date();d.setDate(d.getDate()+offset);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
+const FAVORITES_STORAGE_PREFIX="cx-tv-favorites-v1:";
+const TRANSMISSION_ALERTS_PREFIX="cx-tv-transmission-alerts-v1:";
+const TRANSMISSION_STATE_PREFIX="cx-tv-transmission-state-v1:";
+function favoriteStorageKey(){return FAVORITES_STORAGE_PREFIX+String(currentUser?.id||"guest")}
+function transmissionAlertsKey(){return TRANSMISSION_ALERTS_PREFIX+String(currentUser?.id||"guest")}
+function transmissionStateKey(){return TRANSMISSION_STATE_PREFIX+String(currentUser?.id||"guest")}
+function normalizeTeamName(value){return String(value||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"")}
+function favoriteTeams(){try{const rows=JSON.parse(localStorage.getItem(favoriteStorageKey())||"[]");return Array.isArray(rows)?rows.filter(x=>typeof x==="string"&&x.trim()):[]}catch{return []}}
+function isTeamFavorite(name){const key=normalizeTeamName(name);return !!key&&favoriteTeams().some(x=>normalizeTeamName(x)===key)}
+function isFavoriteMatch(e){return [e.strHomeTeam,e.strAwayTeam].filter(Boolean).some(isTeamFavorite)}
+function toggleFavoriteTeam(name){const rows=favoriteTeams(),key=normalizeTeamName(name),index=rows.findIndex(x=>normalizeTeamName(x)===key);if(index>=0)rows.splice(index,1);else if(key)rows.push(String(name).trim());try{localStorage.setItem(favoriteStorageKey(),JSON.stringify(rows))}catch(e){console.warn("No se pudo guardar el favorito",e)}return index<0}
+function favoriteTeamActions(e){
+ const names=[e?.strHomeTeam,e?.strAwayTeam].filter(x=>x&&!/^(local|visitante)$/i.test(x));
+ if(!names.length)return "";
+ return '<div class="favorite-team-actions">'+names.map(name=>'<button type="button" class="favorite-team-btn '+(isTeamFavorite(name)?"selected":"")+'" data-favorite-team="'+esc(name)+'" aria-pressed="'+isTeamFavorite(name)+'">'+(isTeamFavorite(name)?"★ ":"☆ ")+esc(name)+'</button>').join("")+'</div>';
+}
+function transmissionAlertsEnabled(){try{return localStorage.getItem(transmissionAlertsKey())==="1"}catch{return false}}
+function setTransmissionAlertsEnabled(value){try{localStorage.setItem(transmissionAlertsKey(),value?"1":"0")}catch(e){console.warn("No se pudo guardar la preferencia de alertas",e)}}
+function confirmedTransmission(e){
+ const candidates=[];
+ if(e?._netflixSchedule)candidates.push("Netflix");
+ if(e?._managed&&e?._verified){candidates.push(e._providerName,e._channelName?("DISH • "+e._channelName):"")}
+ if(e?._espn||e?._ucl||e?._nhlOfficial||e?.strTVStation||e?.strChannel||e?.strBroadcast){
+  if(Array.isArray(e?._watchOptions))candidates.push(...e._watchOptions);
+  candidates.push(e?.strTVStation,e?.strChannel,e?.strBroadcast);
+ }
+ const result=[];
+ for(const raw of candidates.filter(Boolean).flatMap(x=>String(x).split(/[,;|]/).map(y=>y.trim()).filter(Boolean))){
+  if(/^(tba|tbd|to be announced|unknown|pending|por confirmar|sin confirmar|n\/a|none|--?)$/i.test(raw))continue;
+  const name=/^espn$/i.test(raw)?"ESPN":/^espn\s*\+$/i.test(raw)?"ESPN+":streamPlatform(raw)||raw;
+  if(!result.some(x=>x.toLowerCase()===name.toLowerCase()))result.push(name);
+ }
+ return result;
+}
+function transmissionStateBadge(e){
+ const confirmed=confirmedTransmission(e);
+ return '<span class="transmission-state '+(confirmed.length?"confirmed":"pending")+'">'+(confirmed.length?"✓ Transmisión confirmada":"◷ Por confirmar")+'</span>';
+}
+function transmissionEventKey(e){
+ const date=String(e?.dateEvent||"").slice(0,10),teams=[e?.strHomeTeam,e?.strAwayTeam].filter(Boolean).map(normalizeTeamName).sort();
+ return String(e?.idEvent||e?.id||"")+"|"+date+"|"+teams.join("|");
+}
+function readTransmissionState(){try{const x=JSON.parse(localStorage.getItem(transmissionStateKey())||"{}");return x&&typeof x==="object"?x:{}}catch{return {}}}
+function writeTransmissionState(value){try{localStorage.setItem(transmissionStateKey(),JSON.stringify(value))}catch(e){console.warn("No se pudo guardar el estado de transmisiones",e)}}
+async function deliverBrowserNotification(title,body,tag){
+ if(!("Notification" in window)||Notification.permission!=="granted")return false;
+ const options={body,tag,data:{url:location.href}};
+ try{
+  if("serviceWorker" in navigator){const reg=await navigator.serviceWorker.ready;if(reg&&typeof reg.showNotification==="function"){await reg.showNotification(title,options);return true}}
+  new Notification(title,options);return true;
+ }catch(e){console.warn("No se pudo mostrar la notificación",e);return false}
+}
+function checkTransmissionAnnouncements(events,baselineOnly=false){
+ if(!transmissionAlertsEnabled()||!("Notification" in window)||Notification.permission!=="granted")return;
+ if(!favoriteTeams().length)return;
+ const stateMap=readTransmissionState(),now=Date.now();
+ for(const e of events||[]){
+  if(!isFavoriteMatch(e))continue;
+  const start=eventStartInstant(e);if(start&&start.getTime()<=now)continue;
+  const key=transmissionEventKey(e),current=confirmedTransmission(e),previous=stateMap[key];
+  if(!previous){stateMap[key]={platforms:current,notified:false,title:e.strEvent||""};continue}
+  if(!baselineOnly&&Array.isArray(previous.platforms)&&previous.platforms.length===0&&current.length&&!previous.notified){
+   previous.notified=true;previous.platforms=current;previous.title=e.strEvent||previous.title||"Partido";
+   deliverBrowserNotification("Transmisión confirmada",previous.title+" • "+current.join(", "),"transmission-"+key);
+  }else if(current.length){previous.platforms=current;previous.title=e.strEvent||previous.title||""}
+ }
+ const entries=Object.entries(stateMap);if(entries.length>500)for(const [key] of entries.slice(0,entries.length-500))delete stateMap[key];
+ writeTransmissionState(stateMap);
+}
+function favoriteHomeSection(){
+ const teams=favoriteTeams(),unique=new Map();
+ for(const e of [...scheduleEvents,...sliderEvents])if(isFavoriteMatch(e)){const key=transmissionEventKey(e);if(!unique.has(key))unique.set(key,e)}
+ const matches=[...unique.values()].filter(e=>{const d=eventStartInstant(e);return !d||d.getTime()>Date.now()}).sort((x,y)=>String(x.strTimestamp||x.dateEvent||"").localeCompare(String(y.strTimestamp||y.dateEvent||""))).slice(0,4);
+ const chips=teams.map(x=>'<button class="favorite-remove-chip" data-favorite-team="'+esc(x)+'" title="Dejar de seguir '+esc(x)+'">★ '+esc(x)+' ×</button>').join("");
+ const body=!teams.length?'<p class="muted">Sigue equipos desde sus partidos en Agenda y sus próximos juegos aparecerán aquí.</p>':matches.length?'<div class="favorite-match-list">'+matches.map(e=>'<article class="card favorite-match-card"><h3>'+esc(e.strEvent||"Partido")+'</h3><p class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</p>'+scoreBadge(e)+transmissionStateBadge(e)+watchBadges(e)+reminderActions(e)+shareEventActions(e)+'</article>').join("")+'</div>':'<p class="muted">Todavía no hay próximos partidos cargados de tus equipos. Abre Agenda para revisar más fechas.</p>';
+ return '<section class="favorites-home"><div class="section-title"><div><h2>Mis equipos</h2><p class="small muted">Partidos y avisos de tus favoritos</p></div><button class="btn" data-open-schedule="true">Abrir Agenda</button></div>'+(teams.length?'<div class="favorite-chip-row">'+chips+'</div>':"")+body+'</section>';
+}
+function renderFavoriteHome(){const node=document.getElementById("favoriteHome");if(node)node.innerHTML=favoriteHomeSection()}
+function shareEventActions(e){
+ const title=e?.strEvent||e?.title||"Partido deportivo",when=[e?.dateEvent,e?.strTime].filter(Boolean).join(" • "),platforms=confirmedTransmission(e),where=platforms.length?platforms.join(", "):"Transmisión por confirmar";
+ const text=title+(when?" • "+when:"")+" • "+where+" • "+location.href;
+ const start=eventStartInstant(e);
+ return '<div class="share-actions"><a class="share-btn whatsapp" href="https://wa.me/?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>'+(start?'<button class="share-btn calendar" type="button" data-calendar-event="'+esc(transmissionEventKey(e))+'">＋ Calendario</button>':"")+'</div>';
+}
+function transmissionFilterOptions(events){return [...new Set(events.flatMap(confirmedTransmission))].sort((a,b)=>a.localeCompare(b))}
+function scheduleFilterControls(){
+ const sportEvents=scheduleEvents.filter(e=>state.sport==="Fútbol"?sportMatches(e,"Fútbol"):sportMatches(e,state.sport));
+ const leagues=[...new Set(sportEvents.map(e=>String(e.strLeague||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+ const teams=[...new Set(sportEvents.flatMap(e=>[e.strHomeTeam,e.strAwayTeam]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+ const platforms=transmissionFilterOptions(sportEvents);
+ const select=(key,label,values)=>'<label class="schedule-filter"><span>'+label+'</span><select data-schedule-filter="'+key+'"><option value="">Todas</option>'+values.map(x=>'<option value="'+esc(x)+'"'+(scheduleFilters[key]===x?' selected':'')+'>'+esc(x)+'</option>').join("")+'</select></label>';
+ const alerts=transmissionAlertsEnabled();
+ return '<div class="schedule-filter-panel">'+select("league","Liga",leagues)+select("team","Equipo",teams)+select("platform","Plataforma",platforms)+'<button type="button" id="favoriteOnlyToggle" class="schedule-filter-toggle '+(scheduleFilters.favoritesOnly?"active":"")+'" aria-pressed="'+scheduleFilters.favoritesOnly+'">★ Solo favoritos'+(favoriteTeams().length?" · "+favoriteTeams().length:"")+'</button><button type="button" id="transmissionAlertToggle" class="schedule-filter-toggle '+(alerts?"active":"")+'" aria-pressed="'+alerts+'">'+(alerts?"🔔 Avisos de transmisión activos":"🔔 Avisarme al confirmar")+'</button></div>';
+}
+function scheduleMatchesFilters(e){
+ if(!(state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return false;
+ if(scheduleFilters.favoritesOnly&&!isFavoriteMatch(e))return false;
+ if(scheduleFilters.league&&String(e.strLeague||"")!==scheduleFilters.league)return false;
+ if(scheduleFilters.team&&![e.strHomeTeam,e.strAwayTeam].includes(scheduleFilters.team))return false;
+ if(scheduleFilters.platform&&!confirmedTransmission(e).some(x=>x===scheduleFilters.platform))return false;
+ return true;
+}
+function renderScheduleDynamic(){const node=document.getElementById("scheduleDynamic");if(!node)return;node.innerHTML=scheduleCards();bindScheduleFilterControls()}
+function bindScheduleFilterControls(){
+ document.querySelectorAll("[data-schedule-filter]").forEach(x=>x.onchange=()=>{scheduleFilters[x.dataset.scheduleFilter]=x.value;renderScheduleDynamic()});
+ const fav=document.getElementById("favoriteOnlyToggle");if(fav)fav.onclick=()=>{scheduleFilters.favoritesOnly=!scheduleFilters.favoritesOnly;renderScheduleDynamic()};
+ const alerts=document.getElementById("transmissionAlertToggle");if(alerts)alerts.onclick=toggleTransmissionAlerts;
+}
+async function toggleTransmissionAlerts(){
+ const next=!transmissionAlertsEnabled();
+ if(next){
+  if(!("Notification" in window)){showReminderToast("Este navegador no permite notificaciones.");return}
+  else {
+   let permission=Notification.permission;
+   if(permission==="default"){try{permission=await Notification.requestPermission()}catch{permission="denied"}}
+   if(permission!=="granted"){showReminderToast("Activa las notificaciones en el navegador para recibir estos avisos.");return}
+  }
+ }
+ setTransmissionAlertsEnabled(next);
+ if(next)checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);
+ showReminderToast(next?"Te avisaremos cuando una transmisión se confirme para tus equipos.":"Avisos de transmisión desactivados.");
+ renderScheduleDynamic();
+}
+function setupFavoriteInteractions(){
+ if(favoriteInteractionsBound)return;favoriteInteractionsBound=true;
+ document.addEventListener("click",event=>{
+  const fav=event.target.closest("[data-favorite-team]");
+  if(fav){event.preventDefault();const added=toggleFavoriteTeam(fav.dataset.favoriteTeam);showReminderToast(added?"Equipo agregado a Mis equipos.":"Equipo eliminado de Mis equipos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
+  const openSchedule=event.target.closest("[data-open-schedule]");if(openSchedule){event.preventDefault();state.view="schedule";state.sport="Todos";scheduleRange="month";dashboard();return} const calendar=event.target.closest("[data-calendar-event]");
+  if(calendar){const e=[...scheduleEvents,...sliderEvents].find(x=>transmissionEventKey(x)===calendar.dataset.calendarEvent);if(!e)return;const start=eventStartInstant(e);if(!start){showReminderToast("Este partido no tiene hora de inicio.");return}downloadReminderCalendar({id:transmissionEventKey(e),title:e.strEvent||"Partido deportivo",startAt:start.toISOString(),league:e.strLeague||e.strSport||"Deporte",platform:confirmedTransmission(e).join(", ")});}
+ });
+}
+
 function scheduleControls(){return `<div class="chips schedule-tabs">${[["today","Hoy"],["tomorrow","Mañana"],["week","Próximos 7 días"],["month","Próximos 30 días"]].map(x=>`<button data-range="${x[0]}" class="chip ${scheduleRange===x[0]?"active":""}">${x[1]}</button>`).join("")}</div>`}
 function sportMatches(e,s){if(s==="Todos")return true;if(s==="Champions League")return isChampionsLeague(e);const x=String([e.strLeague,e.strSport,e.strEvent].join(" ")).toLowerCase();if(s==="NFL")return /\bnfl\b|national football league/.test(x);if(s==="NBA")return /\bnba\b|national basketball association/.test(x)&&!/ncaa|college/.test(x);if(s==="MLB")return /\bmlb\b|major league baseball/.test(x);if(s==="NHL")return /\bnhl\b|national hockey league/.test(x);if(s==="Fútbol")return /soccer|fútbol|football/.test(x)&&!/american football|college football|national football league/.test(x);if(s==="Tenis")return /tennis|tenis|\batp\b|\bwta\b/.test(x);if(s==="UFC/MMA")return /ufc|mma|mixed martial/.test(x);if(s==="NCAA")return /ncaa|college|division 1/.test(x);if(s==="Fórmula 1")return /formula 1|formula one|\bf1\b/.test(x);return x.includes(s.toLowerCase())}
 const ESPN_SPORT_FEEDS={
@@ -231,7 +364,15 @@ function footballCompetition(e){return String(e.strLeague||"Liga sin identificar
 function footballFilter(e){return sportMatches(e,"Fútbol")&&(footballLeague==="Todas"||footballCompetition(e).toLowerCase().includes(footballLeague.toLowerCase()))}
 function footballLeagueSelector(){if(state.sport!=="Fútbol")return "";const found=[...new Set(scheduleEvents.filter(e=>sportMatches(e,"Fútbol")).map(footballCompetition))];const leagues=[...new Set(["Todas",...FOOTBALL_COMPETITIONS,...found])];return '<div class="football-league-picker"><label for="footballLeague">Liga o copa</label><select id="footballLeague">'+leagues.map(x=>'<option value="'+esc(x)+'"'+(footballLeague===x?' selected':'')+'>'+esc(x)+'</option>').join("")+'</select></div>'}
 function eventLive(e){const s=String(e.strStatus||"").toUpperCase(),p=String(e.strProgress||"");return /^(1H|2H|HT|ET|PEN|LIVE|IN PLAY|Q[1-4])$/.test(s)||/^\\d{1,3}(\\+\\d+)?['′]?$/.test(p)}
-function scoreBadge(e){const h=e.intHomeScore,a=e.intAwayScore,has=h!==null&&h!==undefined&&h!==""&&a!==null&&a!==undefined&&a!=="";return '<div class="scoreline">'+(eventLive(e)?'<span class="live-indicator">● EN VIVO</span>':"")+(has?'<strong class="match-score">'+esc(h)+' - '+esc(a)+'</strong>':"")+(e.strProgress?'<span class="muted small">'+esc(e.strProgress)+'</span>':"")+'</div>'}
+function eventFinished(e){const s=String(e?.strStatus||"").toLowerCase();return /final|finished|completed|full time|game over|match ended/.test(s)}
+function eventStateBadge(e){
+ if(eventLive(e))return '<span class="event-state live">● EN VIVO</span>';
+ if(eventFinished(e))return '<span class="event-state finished">FINALIZADO</span>';
+ const start=eventStartInstant(e);
+ if(start&&start.getTime()>Date.now())return '<span class="event-state upcoming">PRÓXIMO</span>';
+ return '<span class="event-state neutral">'+esc(e?.strStatus||"Estado por actualizar")+'</span>';
+}
+function scoreBadge(e){const h=e.intHomeScore,a=e.intAwayScore,has=h!==null&&h!==undefined&&h!==""&&a!==null&&a!==undefined&&a!=="";return '<div class="scoreline">'+eventStateBadge(e)+(has?'<strong class="match-score">'+esc(h)+' - '+esc(a)+'</strong>':"")+(e.strProgress?'<span class="muted small">'+esc(e.strProgress)+'</span>':"")+'</div>'}
 async function nhlGames(offsets){
  const dates=offsets.map(n=>dateKey(n)),queue=[...dates],results=[];
  async function worker(){
@@ -308,7 +449,7 @@ function setupReminderInteractions(){
   const id=button.dataset.reminderId,match=reminderEventIndex.get(id),action=button.dataset.reminderAction;
   if(!match){showReminderToast("Actualiza la agenda y vuelve a intentarlo.");return}
   const start=eventStartInstant(match);if(!start){showReminderToast("Este partido no tiene hora de inicio disponible.");return}
-  const record={id,title:match.strEvent||match.title||"Partido deportivo",startAt:start.toISOString(),league:match.strLeague||match.strSport||"Deporte",platform:match.strTVStation||match._providerName||""};
+  const record={id,title:match.strEvent||match.title||"Partido deportivo",startAt:start.toISOString(),league:match.strLeague||match.strSport||"Deporte",platform:confirmedTransmission(match).join(", ")||match.strTVStation||match._providerName||""};
   if(action==="calendar"){downloadReminderCalendar(record);return}
   const rows=readSavedReminders(),index=rows.findIndex(r=>r.id===id);
   if(index>=0){rows.splice(index,1);writeSavedReminders(rows);button.classList.remove("active");button.setAttribute("aria-pressed","false");button.textContent="🔔 Recordarme · 5 min antes";showReminderToast("Recordatorio eliminado.");return}
@@ -355,7 +496,12 @@ function downloadReminderCalendar(record){
  a.href=url;a.download=(record.title||"partido").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".ics";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  showReminderToast("Calendario descargado con aviso 5 minutos antes. Ábrelo para guardarlo.");
 }
-function scheduleCards(){const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():"");if(!scheduleEvents.some(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return intro+'<div class="notice">'+(state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos de ')+esc(state.sport)+' en este período. Prueba otro período o consulta los próximos 30 días.</div>';return intro+'<div class="schedule-list">'+scheduleEvents.filter(e=>state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)).map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+watchBadges(e)+reminderActions(e)+'</div></article>').join("")+'</div>'}
+function scheduleCards(){
+ const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
+ const rows=scheduleEvents.filter(scheduleMatchesFilters);
+ if(!rows.length)return intro+controls+'<div class="notice">'+(scheduleFilters.favoritesOnly&&!favoriteTeams().length?'Agrega equipos favoritos desde los botones ☆ de cada partido. ':state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos que coincidan con estos filtros. ')+(scheduleFilters.favoritesOnly?'Desactiva “Solo favoritos” o sigue equipos desde sus partidos.':'Prueba otro período o cambia los filtros.')+'</div>';
+ return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
+}
 
 function setupScheduleAutoRefresh(){
  if(!scheduleRefreshTimer)scheduleRefreshTimer=setInterval(()=>{
@@ -420,9 +566,9 @@ async function loadSchedule(silent=false){
   scheduleEvents=[...managed,...fallback,...mlb,...nhl,...ucl,...espn]
    .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||"")))
    .slice(0,600);
-  const target=document.getElementById("scheduleDynamic");
+  checkTransmissionAnnouncements(scheduleEvents);renderFavoriteHome(); const target=document.getElementById("scheduleDynamic");
   if(target){
-   target.innerHTML=scheduleCards();
+   target.innerHTML=scheduleCards(); bindScheduleFilterControls();
    const fl=document.getElementById("footballLeague");
    if(fl)fl.onchange=()=>{
     footballLeague=fl.value;
@@ -453,7 +599,7 @@ function content(){
  const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>';
  const providerSection=canView("providers")?'<h2>Plataformas digitales</h2>'+providerCards():"";
  const channelSection=canView("channels")?'<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>'+channelFilters()+channelCards(filteredChannels):"";
- return heroSlider()+finder+chips()+providerSection+channelSection
+ return heroSlider()+'<div id="favoriteHome">'+favoriteHomeSection()+'</div>'+finder+chips()+providerSection+channelSection
 }
 
 function mobileNav(){
@@ -465,12 +611,12 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v66 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v67 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
 function bind(){
- setupReminderInteractions();
+ setupReminderInteractions(); setupFavoriteInteractions();
  const accountBtn=document.getElementById("account"),menu=document.getElementById("accountMenu");
  if(accountBtn&&menu){accountBtn.onclick=e=>{e.stopPropagation();menu.classList.toggle("hidden");accountBtn.setAttribute("aria-expanded",String(!menu.classList.contains("hidden")))};menu.onclick=e=>e.stopPropagation();setTimeout(()=>document.addEventListener("click",()=>{menu.classList.add("hidden");accountBtn.setAttribute("aria-expanded","false")},{once:true}),0)}
  const profileBtn=document.getElementById("menuProfile");if(profileBtn)profileBtn.onclick=accountPanel;
@@ -597,7 +743,7 @@ async function loadSportsSlider(force=false){
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,36);
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
-  showSlide();renderProviders();dashboardChannelRefresh();
+  showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
  }catch(e){console.warn("Sports day slider unavailable",e);showSlide()}
  finally{sliderLoading=false}
@@ -718,4 +864,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=66").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=67").catch(e=>console.warn("SW:",e)))}
