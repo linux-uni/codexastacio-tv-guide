@@ -33,8 +33,32 @@ function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=
 
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
-function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(!home&&!away)return feedVisual(e);const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
-function feedVisual(e){const k=leagueKey(e);return k?'<div class="league-feed-art league-'+k.toLowerCase()+'"><span>'+k+'</span><small>LIVE SPORTS FEED</small></div>':""}
+function sportArtInfo(e){
+ const value=String([e?.strSport,e?.sport,e?.strLeague,e?.title,e?.strEvent].filter(Boolean).join(" ")).toLowerCase();
+ if(/badminton/.test(value))return {key:"badminton",label:"BADMINTON",icon:"🏸"};
+ if(/american football|\bnfl\b|football league/.test(value))return {key:"football",label:"FÚTBOL AMERICANO",icon:"🏈"};
+ if(/ice hockey|\bnhl\b|hockey/.test(value))return {key:"hockey",label:"HOCKEY",icon:"🏒"};
+ if(/baseball|\bmlb\b/.test(value))return {key:"baseball",label:"BÉISBOL",icon:"⚾"};
+ if(/basketball|\bnba\b/.test(value))return {key:"basketball",label:"BALONCESTO",icon:"🏀"};
+ if(/tennis|tenis|\batp\b|\bwta\b/.test(value))return {key:"tennis",label:"TENIS",icon:"🎾"};
+ if(/ufc|mma|mixed martial|boxing|boxeo/.test(value))return {key:"combat",label:/boxing|boxeo/.test(value)?"BOXEO":"UFC · MMA",icon:"🥊"};
+ if(/formula 1|formula one|\bf1\b|motor racing|motorsport|racing/.test(value))return {key:"racing",label:"MOTORSPORT",icon:"🏁"};
+ if(/soccer|fútbol|\bucl\b|champions league/.test(value))return {key:"soccer",label:"FÚTBOL",icon:"⚽"};
+ if(/volleyball|voleibol/.test(value))return {key:"volleyball",label:"VOLEIBOL",icon:"🏐"};
+ if(/rugby/.test(value))return {key:"rugby",label:"RUGBY",icon:"🏉"};
+ if(/golf/.test(value))return {key:"golf",label:"GOLF",icon:"⛳"};
+ if(/cricket/.test(value))return {key:"cricket",label:"CRICKET",icon:"🏏"};
+ if(/swimming|natación|aquatics/.test(value))return {key:"aquatics",label:"NATACIÓN",icon:"🏊"};
+ if(/cycling|ciclismo/.test(value))return {key:"cycling",label:"CICLISMO",icon:"🚴"};
+ if(/athletics|atletismo/.test(value))return {key:"athletics",label:"ATLETISMO",icon:"🏃"};
+ return {key:"sports",label:String(e?.strSport||"DEPORTE").toUpperCase(),icon:"🏆"};
+}
+function sportArtwork(e,variant="card"){
+ const art=sportArtInfo(e),league=String(e?.strLeague||"Evento deportivo");
+ return '<div class="sport-art sport-art-'+variant+' art-'+art.key+'" role="img" aria-label="Ilustración de '+esc(art.label.toLowerCase())+'"><span class="sport-art-orb"></span><span class="sport-art-lines"></span><span class="sport-art-icon" aria-hidden="true">'+art.icon+'</span><div class="sport-art-copy"><strong>'+esc(art.label)+'</strong><small>'+esc(league)+'</small></div></div>';
+}
+function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
+function feedVisual(e){return sportArtwork(e,"card")}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
@@ -376,9 +400,9 @@ function showSlide(step=0){
  }
  slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
  const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=officialScheduleLink(e);
- hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");
+ hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"")+(img?"":" hero-fallback");
  hero.style.backgroundImage=img?'linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("'+esc(img)+'")':"";
- hero.innerHTML='<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
+ hero.innerHTML=(img?"":sportArtwork(e,"hero"))+'<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
 }
 function sliderLocalDate(e){
  if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
