@@ -88,7 +88,7 @@ function passwordRecovery(){
  document.getElementById("recoveryForm").onsubmit=async e=>{e.preventDefault();const pw=document.getElementById("newPassword").value,cp=document.getElementById("confirmPassword").value,msg=document.getElementById("recoveryMsg");if(pw!==cp){msg.className="danger small";msg.textContent="Las contraseñas no coinciden.";return}const {error}=await sb.auth.updateUser({password:pw});if(error){msg.className="danger small";msg.textContent=error.message;return}history.replaceState({},document.title,location.pathname);msg.className="ok small";msg.textContent="Contraseña actualizada. Abriendo la guía…";setTimeout(async()=>{const {data}=await sb.auth.getUser();if(data?.user)await openSession(data.user);else login()},700)}
 }
 function nav(){
- const items=[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"],["install","Instalar app"]].filter(([v])=>v==="home"||v==="install"||canView(v));
+ const items=[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"],["favorites","Favoritos"],["install","Instalar app"]].filter(([v])=>v==="home"||v==="install"||canView(v));
  return '<nav class="nav desktop-nav">'+items.map(x=>'<button data-view="'+x[0]+'" class="btn '+(state.view===x[0]?"active":"")+'">'+x[1]+'</button>').join("")+'</nav>'
 }
 
@@ -508,18 +508,18 @@ function scheduleCards(){
 
 function setupScheduleAutoRefresh(){
  if(!scheduleRefreshTimer)scheduleRefreshTimer=setInterval(()=>{
-  if(state.view==="schedule"&&document.visibilityState==="visible")loadSchedule(true);
+  if((state.view==="schedule"||state.view==="favorites")&&document.visibilityState==="visible")loadSchedule(true);
  },300000);
  if(!scheduleRefreshBound){
   scheduleRefreshBound=true;
-  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&state.view==="schedule")loadSchedule(true)});
-  window.addEventListener("online",()=>{if(state.view==="schedule")loadSchedule(true)});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(state.view==="schedule"||state.view==="favorites"))loadSchedule(true)});
+  window.addEventListener("online",()=>{if(state.view==="schedule"||state.view==="favorites")loadSchedule(true)});
  }
 }
 async function loadSchedule(silent=false){
- const box=document.getElementById("scheduleDynamic");
+ const box=document.getElementById("scheduleDynamic")||(state.view==="favorites"?document.getElementById("favoriteScheduleDynamic"):null);
  if(!box)return;
- const requestId=++scheduleRequestId,selected=state.sport,range=scheduleRange;
+ const favoritesView=state.view==="favorites",requestId=++scheduleRequestId,selected=favoritesView?"Todos":state.sport,range=favoritesView?"week":scheduleRange;
  if(!silent&&!box.querySelector(".schedule-card"))box.innerHTML='<div class="notice">Cargando agenda deportiva…</div>';
  const updated=document.getElementById("scheduleUpdated");
  if(updated)updated.textContent="Actualizando feeds…";
@@ -548,7 +548,7 @@ async function loadSchedule(silent=false){
    includeUcl?championsGames(offsets):Promise.resolve([]),
    Promise.all(espnKeys.map(key=>espnGames(offsets,key))).then(groups=>groups.flat())
   ]);
-  if(requestId!==scheduleRequestId||state.view!=="schedule"||state.sport!==selected||scheduleRange!==range)return;
+  if(requestId!==scheduleRequestId||(state.view!=="schedule"&&state.view!=="favorites")||(state.view==="schedule"&&(state.sport!==selected||scheduleRange!==range)))return;
   const managed=(db.data||[]).map(x=>{
    const d=x.starts_at?new Date(x.starts_at):null;
    return {strEvent:x.title,strSport:x.sport||"Sports",strTimestamp:x.starts_at,dateEvent:d?d.toISOString().slice(0,10):"",strTime:d?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"",strLeague:x.region||x.rights_scope||"",_managed:true,_verified:!!x.verified,_providerName:providers.find(p=>String(p.id)===String(x.provider_id))?.name||"",_channelName:channels.find(ch=>String(ch.id)===String(x.channel_id))?.name||""};
@@ -599,14 +599,15 @@ function content(){
  if(state.view==="install")return installPanel(); if(state.view==="schedule")return '<div class="top"><div><h2>'+(state.sport==="Todos"?"Programación deportiva":"Programación • "+esc(state.sport))+'</h2><p class="muted">Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos. <span id="scheduleUpdated" aria-live="polite"></span></p></div><input id="search" class="input" style="max-width:340px" placeholder="Buscar partido, liga o deporte…"></div>'+chips()+scheduleControls()+'<div id="scheduleDynamic"><div class="notice">Cargando agenda deportiva…</div></div>';
  if(state.view==="channels")return '<h2>Canales DISH</h2><p class="muted">Canales deportivos destacados en 110°W / 119°W.</p>'+chips()+channelCards(filteredChannels);
  if(state.view==="leagues")return '<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p>'+chips()+eventCards(filteredEvents);
+ if(state.view==="favorites")return '<div id="favoriteHome">'+favoriteHomeSection()+'</div><div id="favoriteScheduleDynamic" class="notice">Cargando partidos de tus equipos…</div>';
  const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>';
  const providerSection=canView("providers")?'<h2>Plataformas digitales</h2>'+providerCards():"";
  const channelSection=canView("channels")?'<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>'+channelFilters()+channelCards(filteredChannels):"";
- return heroSlider()+'<div id="favoriteHome">'+favoriteHomeSection()+'</div>'+finder+chips()+providerSection+channelSection
+ return heroSlider()+finder+chips()+providerSection+channelSection
 }
 
 function mobileNav(){
- const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["install","↓","Instalar"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||v==="install"||canView(v));
+ const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["favorites","★","Favoritos"],["install","↓","Instalar"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||v==="install"||canView(v));
  return '<nav class="mobile-nav" aria-label="Navegación móvil">'+items.map(x=>'<button data-view="'+x[0]+'" class="'+(state.view===x[0]?"active":"")+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join("")+'</nav>'
 }
 
@@ -614,7 +615,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v69 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v70 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -642,6 +643,7 @@ function bind(){
  document.querySelectorAll("[data-range]").forEach(b=>b.onclick=()=>{scheduleRange=b.dataset.range;dashboard()});
   document.querySelectorAll("[data-ucl-open]").forEach(b=>b.onclick=()=>{state.view="schedule";state.sport="Champions League";scheduleRange="month";dashboard()});
  if(state.view==="schedule"&&canView("schedule")){setupScheduleAutoRefresh();loadSchedule();}
+ if(state.view==="favorites"){setupScheduleAutoRefresh();loadSchedule();}
  setupSlider();
  const q=document.getElementById("search");if(q)q.oninput=()=>document.querySelectorAll(".searchable").forEach(x=>x.classList.toggle("hidden",!x.dataset.search.includes(q.value.toLowerCase())));
 }
@@ -872,4 +874,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=68").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=70").catch(e=>console.warn("SW:",e)))}
