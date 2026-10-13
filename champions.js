@@ -13,8 +13,8 @@ function canonicalChampionsPlatform(value){
  if(/netflix/i.test(name))return "Netflix";
  if(/paramount|\bcbs\b/i.test(name))return "Paramount+";
  if(/dazn/i.test(name))return "DAZN";
- if(/espn/i.test(name))return "ESPN / Disney+";
- if(/disney/i.test(name))return "Disney+";
+ if(/espn/i.test(name))return "Disney+ Premium";
+ if(/disney/i.test(name))return "Disney+ Premium";
  if(/dish/i.test(name))return "DISH • "+name.replace(/dish\s*/i,"").trim();
  return name;
 }
