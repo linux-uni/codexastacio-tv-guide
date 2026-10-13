@@ -13,8 +13,8 @@ function canonicalChampionsPlatform(value){
  if(/netflix/i.test(name))return "Netflix";
  if(/paramount|\bcbs\b/i.test(name))return "Paramount+";
  if(/dazn/i.test(name))return "DAZN";
- if(/disney/i.test(name))return "Disney+";
  if(/espn/i.test(name))return "ESPN / Disney+";
+ if(/disney/i.test(name))return "Disney+";
  if(/dish/i.test(name))return "DISH • "+name.replace(/dish\s*/i,"").trim();
  return name;
 }
@@ -32,7 +32,7 @@ function championsWatch(e){
   if(espn)options.push("DISH • ESPN (Canal "+espn.n+")");
  }
  const badges=options.map(name=>{
-  const key=["Disney+","DAZN","Netflix","Paramount+"].find(x=>name===x||name.startsWith(x+" / "));
+  const key=["Disney+","DAZN","Netflix","Paramount+"].find(x=>name===x||name.startsWith(x+" / ")||name.includes(x));
   const href=key?UCL_STREAM_URLS[key]:"";
   return href?'<a class="watch-pill" href="'+href+'" target="_blank" rel="noopener noreferrer">'+esc(name)+' ↗</a>':'<span class="watch-pill">'+esc(name)+'</span>';
  }).join("");
