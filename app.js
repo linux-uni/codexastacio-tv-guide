@@ -94,7 +94,33 @@ function nav(){
 
 function chips(){return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL","Champions League","Fútbol","Tenis","UFC/MMA","NCAA","Fórmula 1"].map(x=>`<button data-sport="${x}" class="chip ${state.sport===x?"active":""}">${x}</button>`).join("")}</div>`}
 function providerCards(){return `<div id="providerGrid" class="grid provider-grid"><div class="notice">Actualizando próximos eventos por plataforma…</div></div>`}
-function providerEventCards(){const digital=providers.filter(p=>!p.is_base&&String(p.name).toLowerCase()!=="dish").slice(0,6);if(!digital.length)return '<div class="notice">No hay plataformas digitales habilitadas para esta cuenta.</div>';return digital.map(p=>{const name=p.name,found=sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name===name));return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")).toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div><div class="provider-bottom"><span class="badge">PRÓXIMO</span><h3>'+esc(found?.strEvent||"Próximos eventos")+'</h3><p class="small muted">'+esc(found?[found.dateEvent,found.strTime].filter(Boolean).join(" • "):"Programación por actualizar")+'</p></div></article>'}).join("")}
+function netflixUpcomingEvent(){
+ const today=dateKey();
+ const schedule=[
+  {dateEvent:"2026-11-25",strEvent:"Green Bay Packers vs Los Angeles Rams",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"Hora por confirmar · RD",_netflixSchedule:true},
+  {dateEvent:"2026-12-25",strEvent:"Green Bay Packers vs Chicago Bears",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"2:00 p. m. RD",_netflixSchedule:true},
+  {dateEvent:"2026-12-25",strEvent:"Buffalo Bills vs Denver Broncos",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"5:30 p. m. RD",_netflixSchedule:true},
+  {dateEvent:"2027-01-09",strEvent:"NFL Semana 18 • equipos por confirmar",strSport:"American Football",strLeague:"NFL • Netflix",strTime:"2:00 p. m. RD",_netflixSchedule:true}
+ ];
+ return schedule.find(e=>e.dateEvent>=today)||null;
+}
+function providerEventDate(e){
+ if(!e?.dateEvent)return "";
+ const [y,m,d]=e.dateEvent.split("-").map(Number),date=new Date(Date.UTC(y,m-1,d,12));
+ return [date.toLocaleDateString("es-DO",{timeZone:"America/Santo_Domingo",day:"numeric",month:"short"}),e.strTime].filter(Boolean).join(" • ");
+}
+function providerEventCards(){
+ const digital=providers.filter(p=>!p.is_base&&String(p.name).toLowerCase()!=="dish").slice(0,6);
+ if(!digital.length)return '<div class="notice">No hay plataformas digitales habilitadas para esta cuenta.</div>';
+ return digital.map(p=>{
+  const name=p.name,isNetflix=/^netflix$/i.test(name);
+  const found=(isNetflix?netflixUpcomingEvent():null)||sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name.toLowerCase()===name.toLowerCase()));
+  const status=found?(found._netflixSchedule?"EN NETFLIX":"PRÓXIMO"):"SIN EVENTO CONFIRMADO";
+  const title=found?.strEvent||(isNetflix?"No hay próximas transmisiones confirmadas":"Próximos eventos");
+  const meta=found?providerEventDate(found):"La tarjeta se actualizará cuando haya un evento anunciado.";
+  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")).toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div><div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p></div></article>';
+ }).join("");
+}
 
 function renderProviders(){const x=document.getElementById("providerGrid");if(x)x.innerHTML=providerEventCards()}
 function sportMark(s){const x=(s||"SPORT").toUpperCase();return `<span class="sport-mark">${esc(x==="AMERICAN FOOTBALL"?"NFL":x==="BASKETBALL"?"NBA":x==="BASEBALL"?"MLB":x==="ICE HOCKEY"?"NHL":x==="SOCCER"?"FÚTBOL":x.slice(0,6))}</span>`}
@@ -343,8 +369,18 @@ function bind(){
  const q=document.getElementById("search");if(q)q.oninput=()=>document.querySelectorAll(".searchable").forEach(x=>x.classList.toggle("hidden",!x.dataset.search.includes(q.value.toLowerCase())));
 }
 
+function isNetflixNflEvent(e){
+ const sport=String([e?.strSport,e?.strLeague].join(" ")).toLowerCase();
+ const game=String([e?.strHomeTeam,e?.strAwayTeam,e?.strEvent].join(" ")).toLowerCase();
+ const date=String(e?.dateEvent||e?.strTimestamp||"").slice(0,10);
+ if(!/nfl|american football/.test(sport))return false;
+ if(/netflix/i.test(String(e?.strTVStation||e?.strChannel||"")))return true;
+ return (date==="2026-11-25"&&/packers/.test(game)&&/rams/.test(game))||
+  (date==="2026-12-25"&&((/packers/.test(game)&&/bears/.test(game))||(/bills/.test(game)&&/broncos/.test(game))));
+}
 function demoWhereToWatch(e){
  const sport=(e.strSport||"").toLowerCase(),league=(e.strLeague||"").toLowerCase(),name=(e.strEvent||"").toLowerCase();
+ if(isNetflixNflEvent(e))return [{name:"Netflix",label:"NFL en vivo"}];
  const out=[];
  const add=(name,label)=>{if(!out.some(x=>x.name===name))out.push({name,label})};
  if(/american football|basketball|baseball|ice hockey|tennis/.test(sport))add("DISH","Canales deportivos");
