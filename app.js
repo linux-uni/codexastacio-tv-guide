@@ -20,7 +20,7 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,state={view:"home",sport:"Todos"};
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,state={view:"home",sport:"Todos"};
 const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
  NFL:"https://www.nfl.com/schedules/",
@@ -88,9 +88,38 @@ function passwordRecovery(){
  document.getElementById("recoveryForm").onsubmit=async e=>{e.preventDefault();const pw=document.getElementById("newPassword").value,cp=document.getElementById("confirmPassword").value,msg=document.getElementById("recoveryMsg");if(pw!==cp){msg.className="danger small";msg.textContent="Las contraseñas no coinciden.";return}const {error}=await sb.auth.updateUser({password:pw});if(error){msg.className="danger small";msg.textContent=error.message;return}history.replaceState({},document.title,location.pathname);msg.className="ok small";msg.textContent="Contraseña actualizada. Abriendo la guía…";setTimeout(async()=>{const {data}=await sb.auth.getUser();if(data?.user)await openSession(data.user);else login()},700)}
 }
 function nav(){
- const items=[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"]].filter(([v])=>v==="home"||canView(v));
+ const items=[["home","Inicio"],["schedule","Programación"],["channels","Canales"],["leagues","Ligas"],["install","Instalar app"]].filter(([v])=>v==="home"||v==="install"||canView(v));
  return '<nav class="nav desktop-nav">'+items.map(x=>'<button data-view="'+x[0]+'" class="btn '+(state.view===x[0]?"active":"")+'">'+x[1]+'</button>').join("")+'</nav>'
 }
+
+function detectInstallDevice(){
+ const ua=navigator.userAgent||"",platform=navigator.userAgentData?.platform||navigator.platform||"";
+ const ios=/iPhone|iPad|iPod/i.test(ua)||(/MacIntel/i.test(platform)&&navigator.maxTouchPoints>1);
+ const android=/Android/i.test(ua),mobile=ios||android||!!navigator.userAgentData?.mobile;
+ const browser=/Edg\//i.test(ua)?"Microsoft Edge":/SamsungBrowser/i.test(ua)?"Samsung Internet":/Brave/i.test(ua)?"Brave":/CriOS|Chrome\//i.test(ua)?"Chrome":/FxiOS|Firefox\//i.test(ua)?"Firefox":/Safari/i.test(ua)?"Safari":"Navegador web";
+ let installed=false;try{installed=matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches||navigator.standalone===true}catch{}
+ return {ios,android,mobile,installed,browser,device:ios?(/iPad/i.test(ua)||(/MacIntel/i.test(platform)&&navigator.maxTouchPoints>1)?"iPad":"iPhone"):android?"Android":mobile?"Dispositivo móvil":"Computadora"};
+}
+function installPanel(){
+ const d=detectInstallDevice();
+ const status=d.installed?'<div class="install-status installed">✓ TV Listing App ya está instalada en este dispositivo.</div>':deferredInstallPrompt?'<button id="installAppButton" class="btn primary install-cta">⬇ Instalar TV Listing App</button>':'';
+ let steps;
+ if(d.installed)steps='<p>Abre la app desde el ícono de TV Listing en la pantalla de inicio o en el menú de aplicaciones.</p>';
+ else if(d.ios)steps='<ol><li>Abre esta página en <strong>Safari</strong> si todavía estás en otro navegador o dentro de otra app.</li><li>Toca <strong>Compartir</strong> (□↑) en el menú del navegador.</li><li>Selecciona <strong>Añadir a pantalla de inicio</strong> y luego toca <strong>Añadir</strong>.</li></ol>';
+ else if(d.android)steps='<ol><li>Si aparece el botón de instalación, tócalo y confirma.</li><li>Si no aparece, abre el menú <strong>⋮</strong> de Chrome y elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li></ol>';
+ else if(!d.mobile)steps='<ol><li>Usa el botón de instalación si está disponible.</li><li>También puedes abrir el menú de Chrome o Edge y elegir <strong>Instalar TV Listing App</strong>.</li></ol>';
+ else steps='<ol><li>Abre el menú de tu navegador.</li><li>Selecciona <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li></ol>';
+ const note=!d.installed&&!deferredInstallPrompt?'<p class="small muted install-note">El navegador todavía no ofrece el botón directo. Usa los pasos indicados; la opción puede aparecer después de abrir la página en el navegador completo.</p>':"";
+ return '<div class="install-page"><div class="install-hero"><span class="install-icon">CX</span><div><span class="badge">INSTALACIÓN PARA TU EQUIPO</span><h2>TV Listing App en tu dispositivo</h2><p class="muted">Detectamos: <strong>'+esc(d.device)+' · '+esc(d.browser)+'</strong></p></div></div><article class="card install-card"><h3>'+(d.installed?"App instalada":d.ios?"Añadir al iPhone o iPad":d.android?"Instalar en Android":"Instalar en computadora")+'</h3>'+status+'<div class="install-steps">'+steps+'</div>'+note+'</article><article class="install-benefits"><strong>Acceso directo a tu guía deportiva</strong><p class="small muted">Al instalarla, TV Listing se abre desde tu pantalla de inicio o menú de aplicaciones como una app.</p></article></div>';
+}
+async function installTvListingApp(){
+ if(!deferredInstallPrompt)return;
+ const prompt=deferredInstallPrompt;deferredInstallPrompt=null;
+ try{await prompt.prompt();const choice=await prompt.userChoice;showReminderToast(choice?.outcome==="accepted"?"Instalación iniciada.":"Puedes instalarla después desde esta pestaña.");if(choice?.outcome==="accepted")setTimeout(()=>{if(state.view==="install")dashboard()},700)}
+ catch(e){showReminderToast("No se pudo abrir el instalador. Sigue los pasos de esta pantalla.")}
+}
+window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;if(state.view==="install")dashboard()});
+window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;if(state.view==="install")dashboard()});
 
 function chips(){return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL","Champions League","Fútbol","Tenis","UFC/MMA","NCAA","Fórmula 1"].map(x=>`<button data-sport="${x}" class="chip ${state.sport===x?"active":""}">${x}</button>`).join("")}</div>`}
 function providerCards(){return `<div id="providerGrid" class="grid provider-grid"><div class="notice">Actualizando próximos eventos por plataforma…</div></div>`}
@@ -418,7 +447,7 @@ function content(){
  if(state.view==="schedule"&&!canView("schedule"))return '<div class="access-denied"><h2>Programación restringida</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
  if(state.view==="channels"&&!canView("channels"))return '<div class="access-denied"><h2>Canales restringidos</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
  if(state.view==="leagues"&&!canView("leagues"))return '<div class="access-denied"><h2>Ligas restringidas</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
- if(state.view==="schedule")return '<div class="top"><div><h2>'+(state.sport==="Todos"?"Programación deportiva":"Programación • "+esc(state.sport))+'</h2><p class="muted">Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos. <span id="scheduleUpdated" aria-live="polite"></span></p></div><input id="search" class="input" style="max-width:340px" placeholder="Buscar partido, liga o deporte…"></div>'+chips()+scheduleControls()+'<div id="scheduleDynamic"><div class="notice">Cargando agenda deportiva…</div></div>';
+ if(state.view==="install")return installPanel(); if(state.view==="schedule")return '<div class="top"><div><h2>'+(state.sport==="Todos"?"Programación deportiva":"Programación • "+esc(state.sport))+'</h2><p class="muted">Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos. <span id="scheduleUpdated" aria-live="polite"></span></p></div><input id="search" class="input" style="max-width:340px" placeholder="Buscar partido, liga o deporte…"></div>'+chips()+scheduleControls()+'<div id="scheduleDynamic"><div class="notice">Cargando agenda deportiva…</div></div>';
  if(state.view==="channels")return '<h2>Canales DISH</h2><p class="muted">Canales deportivos destacados en 110°W / 119°W.</p>'+chips()+channelCards(filteredChannels);
  if(state.view==="leagues")return '<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p>'+chips()+eventCards(filteredEvents);
  const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>';
@@ -428,7 +457,7 @@ function content(){
 }
 
 function mobileNav(){
- const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||canView(v));
+ const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["install","↓","Instalar"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||v==="install"||canView(v));
  return '<nav class="mobile-nav" aria-label="Navegación móvil">'+items.map(x=>'<button data-view="'+x[0]+'" class="'+(state.view===x[0]?"active":"")+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join("")+'</nav>'
 }
 
@@ -436,7 +465,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v63 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v65 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -445,7 +474,7 @@ function bind(){
  const accountBtn=document.getElementById("account"),menu=document.getElementById("accountMenu");
  if(accountBtn&&menu){accountBtn.onclick=e=>{e.stopPropagation();menu.classList.toggle("hidden");accountBtn.setAttribute("aria-expanded",String(!menu.classList.contains("hidden")))};menu.onclick=e=>e.stopPropagation();setTimeout(()=>document.addEventListener("click",()=>{menu.classList.add("hidden");accountBtn.setAttribute("aria-expanded","false")},{once:true}),0)}
  const profileBtn=document.getElementById("menuProfile");if(profileBtn)profileBtn.onclick=accountPanel;
- const logoutBtn=document.getElementById("menuLogout");if(logoutBtn)logoutBtn.onclick=logout;
+ const installBtn=document.getElementById("installAppButton");if(installBtn)installBtn.onclick=installTvListingApp; const logoutBtn=document.getElementById("menuLogout");if(logoutBtn)logoutBtn.onclick=logout;
  const ma=document.getElementById("menuAdmin");if(ma)ma.onclick=adminControlCenter;
  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="account")return accountPanel();if(!canView(b.dataset.view))return;state.view=b.dataset.view;dashboard()});
  document.querySelectorAll("[data-sport]").forEach(b=>b.onclick=()=>{
@@ -689,4 +718,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=64").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=65").catch(e=>console.warn("SW:",e)))}
