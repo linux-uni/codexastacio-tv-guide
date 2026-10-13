@@ -21,15 +21,16 @@ const events=[
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
 let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,state={view:"home",sport:"Todos"};
-const GOOGLE_SPORT_FEEDS={
+const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
- NFL:"https://www.google.com/search?q=NFL#sie=lg;/g/11ys7ykdbc;6;/m/059yj;mt;fp;1;;;;-1;",
- NHL:"https://www.google.com/search?q=NHL#sie=lg;/g/11z2g4qfn8;7;/m/05gwr;mt;fp;1;;;;-1",
- MLB:"https://www.google.com/search?q=MLB#sie=lg;/g/11xvs8rv1_;4;/m/09p14;mt;fp;1;;;;-1",
- NBA:"https://www.google.com/search?q=NBA#sie=lg;/g/11z276br2n;3;/m/05jvx;mt;fp;1;;;;-1"
+ NFL:"https://www.nfl.com/schedules/",
+ NHL:"https://www.nhl.com/schedule",
+ MLB:"https://www.mlb.com/schedule",
+ NBA:"https://www.nba.com/schedule"
 };
+function officialScheduleLink(e){const k=leagueKey(e);return k?OFFICIAL_SCHEDULES[k]||"":""}
 function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(s.includes("basketball"))return "NBA";return ""}
-function googleFeedLink(e){const k=leagueKey(e);return k?GOOGLE_SPORT_FEEDS[k]:""}
+
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
 function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(!home&&!away)return feedVisual(e);const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
@@ -287,7 +288,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v57 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">CodeXaStacio TV Guide • v58 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -330,8 +331,29 @@ function demoWhereToWatch(e){
  if(!out.length)add("DISH","Consultar programación");
  return out.slice(0,3);
 }
-function nhlGoogleLink(e){if(!sportMatches(e,"NHL"))return "";const q=encodeURIComponent("NHL "+(e.strAwayTeam||"")+" "+(e.strHomeTeam||"")+" "+(e.dateEvent||""));return '<a class="watch-pill" href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener noreferrer" aria-label="Ver resultados NHL en Google">🏒 Resultados en Google ↗</a>'}
-function watchBadges(e){if(isChampionsLeague(e))return championsWatch(e);const channel=e._channelName||e.strTVStation||e.strChannel||e.strBroadcast||"";const platform=e._providerName||"";const options=[...(e._watchOptions||[])].filter(x=>x&&x!==channel);const list=[channel?{name:channel,label:e._espn?"Feed ESPN; disponibilidad regional puede variar":"Canal confirmado"}:null,platform?{name:platform,label:"Plataforma registrada"}:null,...options.map(name=>({name,label:"Transmisión en la fuente ESPN"}))].filter(Boolean);const known=list.length>0;return '<div class="watch-row"><span class="small muted">📺 Dónde verlo:</span>'+(known?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):'<span class="watch-pill watch-unverified">Canal por confirmar</span>')+nhlGoogleLink(e)+'</div>'}
+function streamPlatform(value){
+ const name=String(value||"").trim();
+ if(!name)return "";
+ if(/dazn/i.test(name))return "DAZN";
+ if(/netflix/i.test(name))return "Netflix";
+ if(/paramount\+?/i.test(name))return "Paramount+";
+ if(/disney\s*\+?/i.test(name))return "Disney+ Premium";
+ if(/espn/i.test(name))return "Disney+ Premium";
+ return "";
+}
+function watchBadges(e){
+ if(isChampionsLeague(e))return championsWatch(e);
+ const sourceValues=[...(Array.isArray(e._watchOptions)?e._watchOptions:[]),e._providerName,e.strTVStation,e.strChannel,e.strBroadcast].filter(Boolean).flatMap(x=>String(x).split(/[,;|]/).map(y=>y.trim()).filter(Boolean));
+ const platforms=[...new Set(sourceValues.map(streamPlatform).filter(Boolean))];
+ const rows=platforms.map(name=>({name,label:name==="Disney+ Premium"?"ESPN en streaming · revisar programación local":"Streaming"}));
+ const dishChannel=e._channelName;
+ if(dishChannel)rows.push({name:dishChannel,label:"Canal registrado en DISH"});
+ const knownNetworks=[...new Set(sourceValues.filter(x=>!streamPlatform(x)))];
+ if(!dishChannel)knownNetworks.forEach(name=>rows.push({name,label:e._espn?"Señal ESPN · streaming según disponibilidad local":"Señal indicada por la fuente"}));
+ if(e._providerName&&!streamPlatform(e._providerName)&&!/^dish$/i.test(e._providerName))rows.push({name:e._providerName,label:"Plataforma registrada"});
+ const list=[...new Map(rows.map(x=>[x.name.toLowerCase(),x])).values()];
+ return '<div class="watch-row"><span class="small muted">📺 Dónde verlo / streaming:</span>'+(list.length?list.map(x=>'<span class="watch-pill">'+esc(x.name)+' <small>'+esc(x.label)+'</small></span>').join(""):'<span class="watch-pill watch-unverified">Plataforma de streaming pendiente de confirmar</span>')+'</div>';
+}
 
 function setupSlider(){
  const hero=document.getElementById("sportsHero");if(!hero)return;
@@ -353,10 +375,10 @@ function showSlide(step=0){
   return;
  }
  slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
- const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=googleFeedLink(e);
+ const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=officialScheduleLink(e);
  hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"");
  hero.style.backgroundImage=img?'linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("'+esc(img)+'")':"";
- hero.innerHTML='<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario '+esc(key)+' ↗</a>':"")+'</div>';
+ hero.innerHTML='<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
 }
 function sliderLocalDate(e){
  if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
