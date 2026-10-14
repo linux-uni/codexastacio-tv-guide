@@ -615,7 +615,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v73 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v74 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -628,7 +628,7 @@ function expandSearchCorpus(value){
  return normalizeSearchText(value).replace(/\blos angeles\b/g,"los angeles la").replace(/\bnew york\b/g,"new york ny").replace(/\bsan francisco\b/g,"san francisco sf").replace(/\bkansas city\b/g,"kansas city kc").replace(/\bnew england\b/g,"new england ne").replace(/\bgreen bay\b/g,"green bay gb").replace(/\btampa bay\b/g,"tampa bay tb").replace(/\bnew orleans\b/g,"new orleans no").replace(/\blas vegas\b/g,"las vegas lv");
 }
 const SEARCH_SYNONYMS={
- "football americano":["american football","nfl"],"american football":["football americano","nfl"],"football":["american football","nfl"],"nfl":["american football","football americano"],
+ "football americano":["american football","nfl"],"futbol americano":["american football","nfl"],"american football":["football americano","nfl"],"football":["american football","nfl"],"nfl":["american football","football americano"],
  "baloncesto":["basketball","nba"],"basketball":["baloncesto","nba"],"nba":["basketball","baloncesto"],
  "beisbol":["baseball","mlb"],"baseball":["beisbol","mlb"],"mlb":["baseball","beisbol"],
  "hockey":["ice hockey","nhl"],"ice hockey":["hockey","nhl"],"nhl":["hockey","ice hockey"],
@@ -980,4 +980,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=73").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=74").catch(e=>console.warn("SW:",e)))}
