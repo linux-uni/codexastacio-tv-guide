@@ -241,8 +241,7 @@ function renderFavoriteHome(){const node=document.getElementById("favoriteHome")
 function shareEventActions(e){
  const title=e?.strEvent||e?.title||"Partido deportivo",when=[e?.dateEvent,e?.strTime].filter(Boolean).join(" • "),platforms=confirmedTransmission(e),where=platforms.length?platforms.join(", "):"Transmisión por confirmar";
  const text=title+(when?" • "+when:"")+" • "+where+" • "+location.href;
- const start=eventStartInstant(e);
- return '<div class="share-actions"><a class="share-btn whatsapp" href="https://wa.me/?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>'+(start?'<button class="share-btn calendar" type="button" data-calendar-event="'+esc(transmissionEventKey(e))+'">＋ Calendario</button>':"")+'</div>';
+ return '<div class="share-actions"><a class="share-btn whatsapp" href="https://wa.me/?text='+encodeURIComponent(text)+'" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a></div>';
 }
 function transmissionFilterOptions(events){return [...new Set(events.flatMap(confirmedTransmission))].sort((a,b)=>a.localeCompare(b))}
 function scheduleFilterControls(){
@@ -443,7 +442,7 @@ function reminderActions(e){
  if(!start||start.getTime()<=Date.now()||/live|final|finished|completed/.test(status))return "";
  const id=reminderEventId(e,start);reminderEventIndex.set(id,e);
  const active=readSavedReminders().some(r=>r.id===id);
- return '<div class="reminder-actions"><button type="button" class="reminder-btn '+(active?"active":"")+'" data-reminder-action="toggle" data-reminder-id="'+esc(id)+'" aria-pressed="'+active+'">'+(active?"🔔 Aviso activo":"🔔 Recordarme · 5 min antes")+'</button><button type="button" class="reminder-btn calendar" data-reminder-action="calendar" data-reminder-id="'+esc(id)+'">＋ Calendario</button></div>';
+ return '<div class="reminder-actions"><button type="button" class="reminder-btn '+(active?"active":"")+'" data-reminder-action="toggle" data-reminder-id="'+esc(id)+'" aria-pressed="'+active+'">'+(active?"🔔 Aviso activo":"🔔 Recordarme · 5 min antes")+'</button></div>';
 }
 function setupReminderInteractions(){
  if(reminderInteractionsBound)return;
@@ -1004,4 +1003,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=76").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=77").catch(e=>console.warn("SW:",e)))}
