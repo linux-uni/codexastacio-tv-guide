@@ -571,7 +571,7 @@ async function loadSchedule(silent=false){
    .slice(0,600);
   checkTransmissionAnnouncements(scheduleEvents);renderFavoriteHome(); const target=document.getElementById("scheduleDynamic");
   if(target){
-   target.innerHTML=scheduleCards(); bindScheduleFilterControls();
+   target.innerHTML=scheduleCards(); bindScheduleFilterControls(); bindGlobalSearch();
    const fl=document.getElementById("footballLeague");
    if(fl)fl.onchange=()=>{
     footballLeague=fl.value;
@@ -596,11 +596,11 @@ function content(){
  if(state.view==="schedule"&&!canView("schedule"))return '<div class="access-denied"><h2>Programación restringida</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
  if(state.view==="channels"&&!canView("channels"))return '<div class="access-denied"><h2>Canales restringidos</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
  if(state.view==="leagues"&&!canView("leagues"))return '<div class="access-denied"><h2>Ligas restringidas</h2><p class="muted">Tu cuenta no tiene acceso a esta sección.</p></div>';
- if(state.view==="install")return installPanel(); if(state.view==="schedule")return '<div class="top"><div><h2>'+(state.sport==="Todos"?"Programación deportiva":"Programación • "+esc(state.sport))+'</h2><p class="muted">Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos. <span id="scheduleUpdated" aria-live="polite"></span></p></div><input id="search" class="input" style="max-width:340px" placeholder="Buscar partido, liga o deporte…"></div>'+chips()+scheduleControls()+'<div id="scheduleDynamic"><div class="notice">Cargando agenda deportiva…</div></div>';
- if(state.view==="channels")return '<h2>Canales DISH</h2><p class="muted">Canales deportivos destacados en 110°W / 119°W.</p>'+chips()+channelCards(filteredChannels);
- if(state.view==="leagues")return '<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p>'+chips()+eventCards(filteredEvents);
- if(state.view==="favorites")return '<div id="favoriteHome">'+favoriteHomeSection()+'</div><div id="favoriteScheduleDynamic" class="notice">Cargando partidos de tus equipos…</div>';
- const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" class="input" placeholder="Buscar partidos, canales, deportes o plataformas…"></div></div>';
+ if(state.view==="install")return installPanel(); if(state.view==="schedule")return '<div class="top"><div><h2>'+(state.sport==="Todos"?"Programación deportiva":"Programación • "+esc(state.sport))+'</h2><p class="muted">Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos. <span id="scheduleUpdated" aria-live="polite"></span></p></div><input id="search" type="search" class="input" style="max-width:340px" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div>'+chips()+scheduleControls()+'<div id="scheduleDynamic"><div class="notice">Cargando agenda deportiva…</div></div>';
+ if(state.view==="channels")return '<h2>Canales DISH</h2><p class="muted">Canales deportivos destacados en 110°W / 119°W.</p><div class="section-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div>'+chips()+channelCards(filteredChannels);
+ if(state.view==="leagues")return '<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p><div class="section-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div>'+chips()+eventCards(filteredEvents);
+ if(state.view==="favorites")return '<div class="section-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div><div id="favoriteHome">'+favoriteHomeSection()+'</div><div id="favoriteScheduleDynamic" class="notice">Cargando partidos de tus equipos…</div>';
+ const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div></div>';
  const providerSection=canView("providers")?'<h2>Plataformas digitales</h2>'+providerCards():"";
  const channelSection=canView("channels")?'<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>'+channelFilters()+channelCards(filteredChannels):"";
  return heroSlider()+finder+chips()+providerSection+channelSection
@@ -615,12 +615,118 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v70 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v73 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
+}
+
+
+let globalSearchQuery="",globalSearchRecords=[],globalSearchClickBound=false;
+function normalizeSearchText(value){
+ return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g," and ").replace(/\+/g," plus ").replace(/[^a-z0-9#]+/g," ").trim().replace(/\s+/g," ");
+}
+function expandSearchCorpus(value){
+ return normalizeSearchText(value).replace(/\blos angeles\b/g,"los angeles la").replace(/\bnew york\b/g,"new york ny").replace(/\bsan francisco\b/g,"san francisco sf").replace(/\bkansas city\b/g,"kansas city kc").replace(/\bnew england\b/g,"new england ne").replace(/\bgreen bay\b/g,"green bay gb").replace(/\btampa bay\b/g,"tampa bay tb").replace(/\bnew orleans\b/g,"new orleans no").replace(/\blas vegas\b/g,"las vegas lv");
+}
+const SEARCH_SYNONYMS={
+ "football americano":["american football","nfl"],"american football":["football americano","nfl"],"football":["american football","nfl"],"nfl":["american football","football americano"],
+ "baloncesto":["basketball","nba"],"basketball":["baloncesto","nba"],"nba":["basketball","baloncesto"],
+ "beisbol":["baseball","mlb"],"baseball":["beisbol","mlb"],"mlb":["baseball","beisbol"],
+ "hockey":["ice hockey","nhl"],"ice hockey":["hockey","nhl"],"nhl":["hockey","ice hockey"],
+ "futbol":["soccer","champions league"],"soccer":["futbol"],"champions":["champions league","ucl"],"ucl":["champions league"],
+ "artes marciales":["mma","ufc"],"mma":["ufc","artes marciales"],"ufc":["mma"],
+ "tenis":["tennis","atp","wta"],"tennis":["tenis","atp","wta"],
+ "formula 1":["f1","formula one"],"f1":["formula 1","formula one"],
+ "paramount":["paramount plus"],"paramount plus":["paramount"],
+ "disney":["disney plus","espn"],"disney plus":["disney"],"espn":["disney plus"],
+ "dazn":["dazn"],"netflix":["netflix"],"dish":["dish network","canal dish"]
+};
+function searchTextMatches(query,value){
+ const q=normalizeSearchText(query),haystack=expandSearchCorpus(value);
+ if(!q)return true;
+ const variants=[q,...(SEARCH_SYNONYMS[q]||[])];
+ return variants.some(variant=>{
+  const v=normalizeSearchText(variant);
+  return v&&(haystack.includes(v)||v.split(" ").filter(Boolean).every(word=>haystack.includes(word)));
+ });
+}
+function globalSearchData(){
+ const records=[],seenEvents=new Set();
+ const eventRows=[...scheduleEvents,...sliderEvents,netflixUpcomingEvent()].filter(Boolean);
+ for(const e of eventRows){
+  const key=transmissionEventKey(e);if(seenEvents.has(key))continue;seenEvents.add(key);
+  const networks=[...(Array.isArray(e._watchOptions)?e._watchOptions:[]),confirmedTransmission(e),e._providerName,e._channelName,e.strTVStation,e.strChannel,e.strBroadcast].flat().filter(Boolean).join(" ");
+  records.push({type:"event",key,title:e.strEvent||"Evento deportivo",meta:[leagueKey(e),e.strLeague,e.strSport,e.dateEvent,e.strTime,e.strStatus,networks,e.strHomeTeam,e.strAwayTeam].filter(Boolean).join(" • "),event:e});
+ }
+ const seenChannels=new Set();
+ for(const c of channels){
+  const key=String(c.n||c.name);if(seenChannels.has(key))continue;seenChannels.add(key);
+  const e=channelEvent(c);
+  records.push({type:"channel",key,title:c.name,meta:["Canal "+c.n,"CH "+c.n,...(c.sports||[]),e?.strEvent||""].filter(Boolean).join(" • "),channel:c});
+ }
+ const serviceNames=[...new Set([...providers.map(p=>p.name),...["DISH","ESPN","ESPN+","Disney+","Disney+ Premium","DAZN","Netflix","Paramount+","Prime Video","Peacock","Apple TV+"]])];
+ for(const name of serviceNames)records.push({type:"platform",key:name,title:name,meta:(providers.find(p=>p.name===name)?.tag||"Plataforma / señal deportiva")+" • Buscar eventos disponibles"});
+ const sports=[["NFL","Fútbol americano"],["NBA","Baloncesto"],["MLB","Béisbol"],["NHL","Hockey"],["Champions League","UEFA • fútbol"],["Fútbol","Soccer • fútbol"],["Tenis","Tennis • ATP • WTA"],["UFC/MMA","UFC • artes marciales mixtas"],["NCAA","College sports"],["Fórmula 1","F1 • motorsport"]];
+ for(const [name,aliases] of sports)records.push({type:"sport",key:name,title:name,meta:aliases+" • Categoría deportiva",sport:name});
+ for(const e of events)records.push({type:"sport",key:e.sport,title:e.title,meta:[e.sport,e.network,e.channel,e.status,"Categoría deportiva"].filter(Boolean).join(" • "),sport:e.sport});
+ return records;
+}
+function globalSearchPanel(query){
+ const q=normalizeSearchText(query);
+ if(q.length<2&&!(q&&/^\d+$/.test(q)))return '<div class="search-hint">Escribe al menos 2 caracteres. Puedes buscar equipos, deportes, ligas, canales, números o plataformas.</div>';
+ globalSearchRecords=globalSearchData().filter(r=>searchTextMatches(q,r.title+" "+r.meta));
+ const groups=[["event","Partidos y eventos","📅"],["channel","Canales DISH","📺"],["platform","Plataformas y señales","▶"],["sport","Deportes y ligas","🏆"]];
+ const total=globalSearchRecords.length;
+ if(!total)return '<div class="search-empty">No encontramos coincidencias. Prueba con el equipo, una abreviatura, el canal o la plataforma.</div>';
+ const renderGroup=([type,title,icon])=>{
+  const rows=globalSearchRecords.filter(r=>r.type===type).slice(0,4);if(!rows.length)return "";
+  return '<section class="search-result-group"><h3>'+icon+' '+title+'</h3>'+rows.map(r=>{
+   const attrs=type==="event"&&r.event?' data-search-event="'+esc(r.key)+'"':type==="channel"?' data-search-channel="'+esc(r.key)+'"':type==="platform"?' data-search-platform="'+esc(r.key)+'"':type==="sport"?' data-search-sport="'+esc(r.key)+'"':"";
+   return '<button type="button" class="search-result-item"'+attrs+'><strong>'+esc(r.title)+'</strong><small>'+esc(r.meta)+'</small></button>';
+  }).join("")+'</section>';
+ };
+ return '<div class="search-result-heading"><strong>Resultados para “'+esc(query)+'”</strong><span>'+total+' coincidencia'+(total===1?"":"s")+'</span></div>'+groups.map(renderGroup).join("");
+}
+function applyGlobalSearch(input){
+ const query=input.value.trim();globalSearchQuery=input.value;
+ let panel=document.getElementById("globalSearchResults");
+ if(!panel){
+  panel=document.createElement("div");panel.id="globalSearchResults";panel.className="global-search-results hidden";
+  const host=input.closest(".finder")||input.closest(".top")||input.closest(".section-search")||input.parentElement;
+  host.insertAdjacentElement("afterend",panel);
+ }
+ const normalized=normalizeSearchText(query),usable=normalized.length>=2||/^\d+$/.test(normalized);
+ panel.innerHTML=query?(usable?globalSearchPanel(query):'<div class="search-hint">Escribe al menos 2 caracteres para buscar.</div>'):"";
+ panel.classList.toggle("hidden",!query);
+ document.querySelectorAll(".searchable").forEach(node=>node.classList.toggle("hidden",usable&&!searchTextMatches(query,node.dataset.search||node.textContent||"")));
+}
+function bindGlobalSearch(){
+ const input=document.getElementById("search");if(!input)return;
+ input.placeholder="Busca equipo, deporte, liga, canal o plataforma…";
+ input.value=globalSearchQuery;
+ input.oninput=()=>applyGlobalSearch(input);
+ if(globalSearchQuery)applyGlobalSearch(input);
+}
+function openGlobalSearchResult(event){
+ const eventButton=event.target.closest("[data-search-event]");
+ const channelButton=event.target.closest("[data-search-channel]");
+ const platformButton=event.target.closest("[data-search-platform]");
+ const sportButton=event.target.closest("[data-search-sport]");
+ if(!eventButton&&!channelButton&&!platformButton&&!sportButton)return;
+ if(eventButton){
+  const row=globalSearchRecords.find(r=>r.type==="event"&&r.key===eventButton.dataset.searchEvent);
+  if(!row?.event)return;
+  const k=leagueKey(row.event);
+  state.sport=k==="UCL"?"Champions League":k==="NFL"?"NFL":k==="NBA"?"NBA":k==="MLB"?"MLB":k==="NHL"?"NHL":k==="UFC/MMA"?"UFC/MMA":k==="TENIS"?"Tenis":k==="F1"?"Fórmula 1":k==="NCAA"?"NCAA":"Todos";
+  state.view="schedule";scheduleRange="month";dashboard();return;
+ }
+ if(channelButton){const row=globalSearchRecords.find(r=>r.type==="channel"&&r.key===channelButton.dataset.searchChannel);state.view="channels";state.sport="Todos";channelFilter="Todos";if(row?.channel)globalSearchQuery=row.channel.name;dashboard();return}
+ if(platformButton){const name=platformButton.dataset.searchPlatform||"";globalSearchQuery=name;if(normalizeSearchText(name)==="dish"){state.view="channels";state.sport="Todos";channelFilter="Todos";dashboard();return}state.view="home";state.sport="Todos";dashboard();setTimeout(()=>document.getElementById("providerGrid")?.scrollIntoView({behavior:"smooth",block:"center"}),100);return}
+ if(sportButton){const name=sportButton.dataset.searchSport;state.view="schedule";state.sport=name;scheduleRange=name==="Champions League"?"month":"week";dashboard()}
 }
 
 function bind(){
  setupReminderInteractions(); setupFavoriteInteractions();
+ if(!globalSearchClickBound){globalSearchClickBound=true;document.addEventListener("click",openGlobalSearchResult)}
  const accountBtn=document.getElementById("account"),menu=document.getElementById("accountMenu");
  if(accountBtn&&menu){accountBtn.onclick=e=>{e.stopPropagation();menu.classList.toggle("hidden");accountBtn.setAttribute("aria-expanded",String(!menu.classList.contains("hidden")))};menu.onclick=e=>e.stopPropagation();setTimeout(()=>document.addEventListener("click",()=>{menu.classList.add("hidden");accountBtn.setAttribute("aria-expanded","false")},{once:true}),0)}
  const profileBtn=document.getElementById("menuProfile");if(profileBtn)profileBtn.onclick=accountPanel;
@@ -645,7 +751,7 @@ function bind(){
  if(state.view==="schedule"&&canView("schedule")){setupScheduleAutoRefresh();loadSchedule();}
  if(state.view==="favorites"){setupScheduleAutoRefresh();loadSchedule();}
  setupSlider();
- const q=document.getElementById("search");if(q)q.oninput=()=>document.querySelectorAll(".searchable").forEach(x=>x.classList.toggle("hidden",!x.dataset.search.includes(q.value.toLowerCase())));
+ bindGlobalSearch();
 }
 
 function isNetflixNflEvent(e){
@@ -874,4 +980,4 @@ function loadSupabase(){
  document.head.appendChild(s);
 }
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=70").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=73").catch(e=>console.warn("SW:",e)))}
