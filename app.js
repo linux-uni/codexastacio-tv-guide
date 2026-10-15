@@ -20,7 +20,102 @@ const events=[
 {sport:"UFC/MMA",title:"UFC/MMA • Próximos eventos",network:"FS1 / Sports",channel:"Consultar listing",status:"PROGRAMACIÓN"},
 {sport:"NHL",title:"NHL • Próximos partidos",network:"ESPN",channel:"140",status:"PROGRAMACIÓN"}
 ];
-let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,scheduleFilters={league:"",team:"",platform:"",favoritesOnly:false},favoriteInteractionsBound=false,state={view:"home",sport:"Todos"};
+const APP_LANGUAGE_KEY="cx-tv-language-v1";
+function detectDeviceLanguage(){
+ try{const saved=localStorage.getItem(APP_LANGUAGE_KEY);if(saved==="en"||saved==="es")return saved}catch{}
+ const langs=[...(navigator.languages||[]),navigator.language||""].map(x=>String(x).toLowerCase());
+ return langs.some(x=>x.startsWith("en"))?"en":"es";
+}
+const ENGLISH_COPY=[
+ ["Todo el deporte.","All sports."],["Una sola guía.","One guide."],["Evento deportivo","Sports event"],["No hay próximos eventos confirmados","No upcoming events confirmed"],["Sin evento confirmado","No confirmed event"],["No hay eventos disponibles","No events available"],["Actualiza la agenda y vuelve a intentarlo.","Refresh the schedule and try again."],["Este partido no tiene hora de inicio disponible.","This game has no start time available."],["Prueba otro período o cambia los filtros.","Try another date range or adjust the filters."],
+ ["Programación deportiva","Sports schedule"],["programación deportiva","sports schedule"],
+ ["Partidos de la categoría seleccionada. Se actualizan automáticamente cada 5 minutos.","Events for the selected category. Updates automatically every 5 minutes."],
+ ["Partidos y avisos de tus favoritos","Your favorite teams and alerts"],["Partidos y eventos","Matches and events"],
+ ["Agrega equipos favoritos desde los botones ☆ de cada partido.","Add favorite teams using the ☆ buttons on each game."],
+ ["Desactiva “Solo favoritos” o sigue equipos desde sus partidos.","Turn off “Favorites only” or follow teams from their games."],
+ ["No hay partidos que coincidan con estos filtros.","No games match these filters."],["Prueba otro período o cambia los filtros.","Try another date range or adjust the filters."],
+ ["Fuente no disponible. Consulta el calendario oficial.","Source unavailable. Check the official schedule."],
+ ["No fue posible cargar la programación en este momento.","The schedule could not be loaded right now."],
+ ["Cargando agenda deportiva…","Loading sports schedule…"],["Actualizando feeds…","Updating feeds…"],["Actualizado","Updated"],["Sin conexión al feed","Feed unavailable offline"],
+ ["Busca equipo, deporte, liga, canal o plataforma…","Search teams, sports, leagues, channels, or platforms…"],
+ ["Buscar partido, liga o deporte…","Search games, leagues, or sports…"],["Busca canales, deportes y plataformas","Find channels, sports, and streaming platforms"],
+ ["Encuentra tus deportes","Find your sports"],["Plataformas digitales","Streaming platforms"],["Canales destacados","Featured channels"],
+ ["Ahora y próximos deportes","Live and upcoming sports"],["Próximos eventos deportivos","Upcoming sports events"],["Próximos eventos","Upcoming events"],
+ ["Próximos partidos","Upcoming games"],["Próximos 7 días","Next 7 days"],["Próximos 30 días","Next 30 days"],
+ ["Hoy","Today"],["Mañana","Tomorrow"],["Todos","All"],["Próximos","Upcoming"],
+ ["Programación","Schedule"],["Inicio","Home"],["Agenda","Schedule"],["Canales","Channels"],["Ligas","Leagues"],["Favoritos","Favorites"],
+ ["Instalar app","Install app"],["Instalar","Install"],["Mi cuenta","My account"],["Mi perfil","My profile"],["Cerrar sesión","Sign out"],
+ ["Bienvenido","Welcome"],["Inicia sesión para continuar","Sign in to continue"],["Usuario o correo","Username or email"],
+ ["Contraseña","Password"],["Mostrar contraseña","Show password"],["Entrar","Sign in"],["¿Olvidaste tu contraseña?","Forgot your password?"],
+ ["No se pudo cargar el servicio de acceso.","Could not load the sign-in service."],
+ ["No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente.","Could not connect to sign-in. Reload and try again."],
+ ["El navegador todavía no ofrece el botón directo.","Your browser does not offer one-tap installation yet."],
+ ["Instalar TV Listing App","Install TV Listing App"],["TV Listing App en tu dispositivo","TV Listing App on your device"],
+ ["Detectamos:","Detected:"],["App instalada","App installed"],["Añadir al iPhone o iPad","Add to iPhone or iPad"],
+ ["Instalar en Android","Install on Android"],["Instalar en computadora","Install on desktop"],
+ ["Si aparece el botón de instalación, tócalo y confirma.","If the install button appears, tap it and confirm."],
+ ["Abre esta página en","Open this page in"],["Toca","Tap"],["Compartir","Share"],
+ ["Añadir a pantalla de inicio","Add to Home Screen"],["Selecciona","Select"],["y luego toca","then tap"],
+ ["Puedes instalarla después desde esta pestaña.","You can install it later from this tab."],
+ ["PRÓXIMO","UPCOMING"],["EN VIVO","LIVE"],["FINALIZADO","FINAL"],["PROGRAMACIÓN","SCHEDULE"],
+ ["Por confirmar","To be confirmed"],["Estado por actualizar","Status pending update"],["Transmisión confirmada","Broadcast confirmed"],
+ ["La fuente no informa la transmisión","Broadcast information unavailable"],["Dónde verlo / streaming:","Where to watch / streaming:"],
+ ["Dónde verlo:","Where to watch:"],["Plataforma de streaming pendiente de confirmar","Streaming platform to be confirmed"],
+ ["Consultar guía oficial","Check official guide"],["Hora por confirmar · RD","Time to be confirmed · DR"],["Hora por confirmar","Time to be confirmed"],
+ ["Recordarme · 5 min antes","Remind me · 5 min before"],["Aviso activo","Reminder active"],["Compartir por WhatsApp","Share on WhatsApp"],
+ ["Solo favoritos","Favorites only"],["Avisarme al confirmar","Notify me when confirmed"],["Avisos de transmisión activos","Broadcast alerts on"],
+ ["Liga","League"],["Equipo","Team"],["Plataforma","Platform"],["Fútbol americano","American football"],["Baloncesto","Basketball"],
+ ["Béisbol","Baseball"],["Hockey","Hockey"],["Fútbol","Soccer"],["Tenis","Tennis"],["Boxeo","Boxing"],["Fórmula 1","Formula 1"],
+ ["No encontramos coincidencias.","No matches found."],["Escribe al menos 2 caracteres.","Enter at least 2 characters."],
+ ["Puedes buscar equipos, deportes, ligas, canales, números o plataformas.","Search teams, sports, leagues, channels, numbers, or platforms."],
+ ["Prueba con el equipo, una abreviatura, el canal o la plataforma.","Try a team, abbreviation, channel, or platform."],
+ ["Partidos y eventos","Games and events"],["Canales DISH","DISH channels"],["Plataformas y señales","Platforms and networks"],["Deportes y ligas","Sports and leagues"],
+ ["Cuenta","Account"],["Cancelar","Cancel"],["Guardar","Save"],["Eventos deportivos especiales","Special sports events"],
+ ["La tarjeta se actualizará cuando haya un evento anunciado.","This card will update when an event is announced."],
+ ["Programación por actualizar","Schedule to be updated"]
+].sort((a,b)=>b[0].length-a[0].length);
+function translateCopy(value){
+ if(state.language!=="en"||!value)return value;
+ let output=value;
+ for(const [source,target] of ENGLISH_COPY)output=output.split(source).join(target);
+ return output;
+}
+function translateInterface(root){
+ if(!root||state.language!=="en")return;
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ let node;
+ while((node=walker.nextNode())){
+  if(node.parentElement?.closest("script,style,textarea"))continue;
+  const next=translateCopy(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;
+ }
+ const elements=[root,...root.querySelectorAll("*")];
+ for(const el of elements)for(const attr of ["placeholder","title","aria-label"]){
+  if(el.hasAttribute?.(attr)){const value=el.getAttribute(attr),next=translateCopy(value);if(next!==value)el.setAttribute(attr,next)}
+ }
+}
+function languageToggleButton(){
+ const label=state.language==="en"?"🌐 English":"🌐 Español";
+ return '<button type="button" id="languageToggle" class="btn language-toggle" style="padding:6px 10px;border:1px solid rgba(75,150,255,.22);border-radius:999px;font-size:12px;margin-top:7px" aria-label="Change language" title="Change language" onclick="toggleAppLanguage()">'+label+'</button>';
+}
+function toggleAppLanguage(){
+ state.language=state.language==="en"?"es":"en";
+ try{localStorage.setItem(APP_LANGUAGE_KEY,state.language)}catch{}
+ if(currentUser)dashboard();else login();
+}
+let localeObserver=null;
+function observeInterfaceLanguage(){
+ document.documentElement.lang=state.language;
+ if(localeObserver||!app||typeof MutationObserver==="undefined")return;
+ localeObserver=new MutationObserver(records=>{
+  if(state.language!=="en")return;
+  for(const record of records){
+   if(record.type==="characterData")translateInterface(record.target.parentElement);
+   for(const node of record.addedNodes||[])if(node.nodeType===1)translateInterface(node);else if(node.nodeType===3)translateInterface(node.parentElement);
+  }
+ });
+ localeObserver.observe(app,{childList:true,subtree:true,characterData:true});
+}
+let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,scheduleFilters={league:"",team:"",platform:"",favoritesOnly:false},favoriteInteractionsBound=false,state={view:"home",sport:"Todos",language:detectDeviceLanguage()};
 const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
  NFL:"https://www.nfl.com/schedules/",
@@ -638,7 +733,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v74 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v78 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -892,7 +987,7 @@ function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>
 async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
 
 function login(notice=""){
- app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div><h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
+ app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
  const msg=document.getElementById("msg");msg.className=notice?"danger small":"small muted";msg.textContent=notice|| (sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…");
  document.getElementById("showPw").onchange=e=>{document.getElementById("pw").type=e.target.checked?"text":"password"};
  document.getElementById("forgot").onclick=()=>{const identity=document.getElementById("identity").value.trim()||prompt("Escribe tu usuario o correo electrónico para solicitar ayuda:");if(!identity)return;const message="Hola, Super Admin de CodeXaStacio TV Guide. Solicito restablecer la contraseña de mi cuenta. Usuario o correo: "+identity+". Por favor, verifica mi identidad y ayúdame a recuperar el acceso. No compartiré contraseñas por WhatsApp.";window.open("https://wa.me/18097777117?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");msg.className="small muted";msg.textContent="Se abrió WhatsApp con tu solicitud preparada. Pulsa Enviar para comunicarte con el administrador."};
@@ -1002,5 +1097,6 @@ function loadSupabase(){
  s.onerror=()=>login("No se pudo cargar el servicio de acceso.");
  document.head.appendChild(s);
 }
+observeInterfaceLanguage();
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=77").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=78").catch(e=>console.warn("SW:",e)))}
