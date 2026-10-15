@@ -245,3 +245,15 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .search-result-item:hover,.search-result-item:focus-visible{border-color:#299bff;background:#0b2340}
 .search-result-item strong{font-size:13px}.search-result-item small{color:#92aaca;font-size:11px;line-height:1.35}
 .search-empty,.search-hint{padding:8px 2px}
+
+/* v79 personalized boxing event artwork */
+.schedule-card .boxing-poster{--fight-a:#fd4569;--fight-b:#27a8ff;position:relative;isolation:isolate;overflow:hidden;width:310px;min-width:310px;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;padding:20px 18px;color:#fff;background:radial-gradient(ellipse at 22% 72%,rgba(253,69,105,.38),transparent 42%),radial-gradient(ellipse at 80% 35%,rgba(39,168,255,.38),transparent 44%),linear-gradient(140deg,#211023,#07192f 58%,#101431)}
+.schedule-card .boxing-poster:before{content:"";position:absolute;z-index:-1;inset:15% 8%;border:1px solid rgba(255,255,255,.17);border-radius:50%;transform:rotate(-16deg) scaleX(1.25);box-shadow:0 0 0 18px rgba(255,255,255,.025),0 0 0 38px rgba(255,255,255,.018)}
+.schedule-card .boxing-poster:after{content:"";position:absolute;z-index:-1;inset:auto 0 0;height:55%;background:linear-gradient(0deg,rgba(3,8,18,.83),transparent)}
+.schedule-card .boxing-poster img{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;opacity:.78}
+.boxing-poster-label{font-size:11px;letter-spacing:.26em;font-weight:950;color:#ff9dad;text-shadow:0 2px 10px #070b17}
+.boxing-poster-match{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.85)}
+.boxing-poster-match b{font-size:clamp(13px,1.25vw,17px);line-height:1.08;font-weight:950;text-transform:uppercase}
+.boxing-poster-match strong{font-size:13px;letter-spacing:.16em;color:#fff}
+.boxing-poster-location{font-size:10px;color:#d4e0f1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 2px 8px #030712}
+@media(max-width:700px){.schedule-card .boxing-poster{width:100%;min-width:0;min-height:190px}.boxing-poster-match b{font-size:clamp(14px,4.2vw,19px)}}
