@@ -154,7 +154,22 @@ function sportArtwork(e,variant="card"){
  const art=sportArtInfo(e),league=String(e?.strLeague||"Evento deportivo");
  return '<div class="sport-art sport-art-'+variant+' art-'+art.key+'" role="img" aria-label="Ilustración de '+esc(art.label.toLowerCase())+'"><span class="sport-art-orb"></span><span class="sport-art-lines"></span><span class="sport-art-icon" aria-hidden="true">'+art.icon+'</span><div class="sport-art-copy"><strong>'+esc(art.label)+'</strong><small>'+esc(league)+'</small></div></div>';
 }
-function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
+function boxingPoster(e,compact=false){
+ const home=teamName(e,"home"),away=teamName(e,"away"),eventName=String(e?.strEvent||"");
+ const words=(home+" "+away+" "+eventName).toLowerCase();
+ const officialPosters=[
+  {match:/daniel dubois.*fabio wardley|fabio wardley.*daniel dubois/,src:"https://www.theo2.co.uk/assets/img/Run-It-Back-Dubois-vs-Wardley-2-1080x1080-87e9c9cf27.jpg"},
+  {match:/emanuel navarrete.*o.?shaquie foster|o.?shaquie foster.*emanuel navarrete/,src:"https://api.toprank.com/storage/uploads/1027/conversions/261024_NavarreteFoster_16x9_ENG-thumb.webp"}
+ ];
+ const src=[e?.strEventThumb,e?.strThumb,e?._poster,e?._image].find(v=>typeof v==="string"&&/^https?:\/\//i.test(v))||officialPosters.find(x=>x.match.test(words))?.src||"";
+ const location=String(e?.strLeague||"Boxeo");
+ return '<div class="boxing-poster '+(compact?"compact":"")+(src?" has-image":"")+'" role="img" aria-label="Cartelera de boxeo: '+esc(home)+' contra '+esc(away)+'">'+
+  (src?'<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+
+  '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">FIGHT NIGHT</span>'+
+  '<span class="boxing-poster-match"><b>'+esc(home)+'</b><strong>VS</strong><b>'+esc(away)+'</b></span>'+
+  '<span class="boxing-poster-location">'+esc(location)+'</span></div>';
+}
+function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(/boxing|boxeo/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return boxingPoster(e,compact);if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
 function feedVisual(e){return sportArtwork(e,"card")}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -734,7 +749,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v78 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v79 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
