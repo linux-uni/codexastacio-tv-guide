@@ -24,7 +24,8 @@ const APP_LANGUAGE_KEY="cx-tv-language-v1";
 function detectDeviceLanguage(){
  try{const saved=localStorage.getItem(APP_LANGUAGE_KEY);if(saved==="en"||saved==="es")return saved}catch{}
  const langs=[...(navigator.languages||[]),navigator.language||""].map(x=>String(x).toLowerCase());
- return langs.some(x=>x.startsWith("en"))?"en":"es";
+ for(const lang of langs){if(lang.startsWith("en"))return "en";if(lang.startsWith("es"))return "es"}
+ return "es";
 }
 const ENGLISH_COPY=[
  ["Todo el deporte.","All sports."],["Una sola guía.","One guide."],["Evento deportivo","Sports event"],["No hay próximos eventos confirmados","No upcoming events confirmed"],["Sin evento confirmado","No confirmed event"],["No hay eventos disponibles","No events available"],["Actualiza la agenda y vuelve a intentarlo.","Refresh the schedule and try again."],["Este partido no tiene hora de inicio disponible.","This game has no start time available."],["Prueba otro período o cambia los filtros.","Try another date range or adjust the filters."],
