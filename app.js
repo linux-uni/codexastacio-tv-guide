@@ -171,14 +171,15 @@ function boxingPoster(e,compact=false){
 }
 function mmaPoster(e,compact=false){
  const home=teamName(e,"home"),away=teamName(e,"away");
- const words=[e?.strEvent,e?.strLeague,e?.strSport,e?.sport].filter(Boolean).join(" ").toLowerCase();
- const eventPosters=[
-  {match:/ufc.*buckley.*malott|buckley.*malott/i,src:"https://s.yimg.com/lo/mysterio/api/b44aee69ee2d8870699d942c5bffb196138ece5794c9ea2665e0fa6c9266f56f/lightyear_networkapi/resizefill_w1080_h1350%3Bquality_80%3Bformat_jpg/https%3A/media.zenfs.com/en/sb_nation_articles_115/949db46a1822bc06ff309d1be7fb5b77.jpg"}
- ];
- const src=eventPosters.find(x=>x.match.test(words))?.src||[e?.strEventThumb,e?.strThumb,e?._poster,e?._image].find(v=>typeof v==="string"&&/^https?:\/\//i.test(v))||"";
+ const matchup=(home+" "+away).toLowerCase();
+ const isHeadliner=matchup.includes("buckley")&&matchup.includes("malott");
+ const eventPoster="https://s.yimg.com/lo/mysterio/api/b44aee69ee2d8870699d942c5bffb196138ece5794c9ea2665e0fa6c9266f56f/lightyear_networkapi/resizefill_w1080_h1350%3Bquality_80%3Bformat_jpg/https%3A/media.zenfs.com/en/sb_nation_articles_115/949db46a1822bc06ff309d1be7fb5b77.jpg";
+ const officialSrc=isHeadliner?eventPoster:"";
+ const homePhoto=teamLogo(e,"home"),awayPhoto=teamLogo(e,"away");
  const league=String(e?.strLeague||"UFC · MMA");
- return '<div class="boxing-poster mma-poster '+(compact?"compact":"")+(src?" has-image":"")+'" role="img" aria-label="Cartelera UFC/MMA: '+esc(home)+' contra '+esc(away)+'">'+
-  (src?'<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+
+ const fighterPhoto=(name,src)=>'<div class="mma-fighter-photo"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(src?'<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div>';
+ return '<div class="boxing-poster mma-poster '+(compact?"compact":"")+(officialSrc?" has-image":"")+'" role="img" aria-label="Cartelera UFC/MMA: '+esc(home)+' contra '+esc(away)+'">'+
+  (officialSrc?'<img class="mma-event-poster" src="'+esc(officialSrc)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'<div class="mma-fighter-photos">'+fighterPhoto(home,homePhoto)+fighterPhoto(away,awayPhoto)+'</div>')+
   '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">UFC · MMA</span>'+
   '<span class="boxing-poster-match"><b>'+esc(home)+'</b><strong>VS</strong><b>'+esc(away)+'</b></span>'+
   '<span class="boxing-poster-location">'+esc(league)+'</span></div>';
@@ -455,8 +456,8 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
  const id="espn-"+feedKey.toLowerCase()+"-"+(event?.id||"event")+"-"+(competition?.id||"game");
  return {idEvent:id,_espn:true,strEvent:eventName,
   strHomeTeam:homeName,strAwayTeam:awayName,
-  strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||"",
-  strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||"",
+  strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||(feedKey==="UFC"&&home?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+home.id+".png":""),
+  strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||(feedKey==="UFC"&&away?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+away.id+".png":""),
   strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":"Basketball",
   strTimestamp:valid?d.toISOString():"",dateEvent:valid?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d):"",
   strTime:valid?d.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
@@ -763,7 +764,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v82 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v83 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
