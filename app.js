@@ -427,7 +427,8 @@ const ESPN_SPORT_FEEDS={
  NCAA:{paths:["football/college-football","basketball/mens-college-basketball","basketball/womens-college-basketball"],sport:"NCAA",league:"NCAA"},
  TENIS:{paths:["tennis/atp","tennis/wta"],sport:"Tennis",league:"Tennis"},
  F1:{paths:["racing/f1"],sport:"Formula 1",league:"Formula 1"},
- NHL:{paths:["hockey/nhl"],sport:"Ice Hockey",league:"NHL"}
+ NHL:{paths:["hockey/nhl"],sport:"Ice Hockey",league:"NHL"},
+ SOCCER:{paths:["soccer/eng.1"],sport:"Soccer",league:"Premier League"}
 };
 function espnNames(event,competition){
  const rows=[...(event?.broadcasts||[]),...(competition?.broadcasts||[]),...(competition?.geoBroadcasts||[])];
@@ -449,7 +450,8 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
  const names=espnNames(event,competition);
  const eventName=(homeName&&awayName)?homeName+" vs "+awayName:(event?.name||event?.shortName||feedKey);
  const tournament=feedKey==="TENIS"&&event?.name?event.name:"";
- const league=feedKey==="TENIS"?((path.includes("/atp")?"ATP":"WTA")+(tournament?" • "+tournament:"")):
+ const league=feedKey==="SOCCER"?"Premier League":
+  feedKey==="TENIS"?((path.includes("/atp")?"ATP":"WTA")+(tournament?" • "+tournament:"")):
   feedKey==="NCAA"?String(event?.season?.type?.name||"NCAA")+" • "+(event?.name||path.split("/").pop()):
   feedKey==="UFC"?(event?.name&&event.name!==eventName?"UFC • "+event.name:"UFC"):
   feedKey==="F1"?"Formula 1":feedKey;
@@ -458,7 +460,7 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
   strHomeTeam:homeName,strAwayTeam:awayName,
   strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||(feedKey==="UFC"&&home?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+home.id+".png":""),
   strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||(feedKey==="UFC"&&away?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+away.id+".png":""),
-  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":"Basketball",
+  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="SOCCER"?"Soccer":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":"Basketball",
   strTimestamp:valid?d.toISOString():"",dateEvent:valid?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d):"",
   strTime:valid?d.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
   strStatus:type.state==="in"?"LIVE":type.completed?"FINAL":type.detail||type.name||"",
@@ -678,7 +680,7 @@ async function loadSchedule(silent=false){
  const includeBoxing=allSports||selected==="Boxeo";
  const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"):
   selected==="NFL"?["NFL"]:selected==="NBA"?["NBA"]:selected==="UFC/MMA"?["UFC"]:
-  selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:[];
+  selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:selected==="Fútbol"?["SOCCER"]:[];
  try{
   const useSportsDb=!["Champions League","MLB","NHL"].includes(selected);
   const externalPromise=useSportsDb
@@ -764,7 +766,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v83 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><strong>Todo el deporte.</strong><span>Una sola guía.</span>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary" aria-haspopup="true" aria-expanded="false">Mi cuenta ▾</button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Mi perfil</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v84 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="WhatsApp">WA<span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
