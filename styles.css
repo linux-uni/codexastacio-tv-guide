@@ -271,3 +271,40 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .schedule-card .mma-fighter-photo b{font-size:clamp(38px,8vw,76px);font-weight:950;color:rgba(255,255,255,.23);letter-spacing:-.08em}
 .schedule-card .mma-fighter-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%;opacity:.76;filter:saturate(.88);mix-blend-mode:screen}
 .schedule-card .mma-poster .mma-event-poster{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:.85}
+
+/* v85 daily sports carousel as responsive event cards */
+.sports-slider.daily-slider{min-height:0;padding:20px 64px 22px;border:1px solid rgba(100,175,255,.2);border-radius:22px;background:radial-gradient(ellipse at 88% 0,rgba(92,75,255,.16),transparent 36%),linear-gradient(145deg,#07172e,#040c1c 72%);box-shadow:0 22px 70px rgba(0,0,0,.32)}
+.daily-slider-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 14px}
+.daily-slider-heading h2{margin:4px 0;font-size:clamp(21px,3vw,30px);letter-spacing:-.035em}
+.daily-slider-heading p{margin:0;color:#92aac9;font-size:12px;line-height:1.5}
+.daily-kicker{color:#67d7ff;font-size:10px;font-weight:950;letter-spacing:.2em}
+.daily-count{flex:0 0 auto;padding:7px 10px;border:1px solid rgba(100,175,255,.2);border-radius:999px;background:rgba(7,25,48,.8);color:#b6d5fa;font-size:11px;font-weight:800}
+.daily-slider .hero-slide{min-height:0;height:auto;display:block;background:none!important;transition:none}
+.daily-event-card{min-height:250px;display:grid;grid-template-columns:minmax(220px,34%) minmax(0,1fr);overflow:hidden;border:1px solid rgba(111,171,255,.2);border-radius:18px;background:linear-gradient(120deg,rgba(10,28,54,.96),rgba(4,13,29,.98));box-shadow:inset 0 1px rgba(255,255,255,.04),0 16px 42px rgba(0,0,0,.25)}
+.daily-card-visual{position:relative;display:flex;min-width:0;min-height:250px;overflow:hidden;align-items:stretch;justify-content:stretch;background:radial-gradient(circle at 35% 30%,rgba(34,144,255,.22),transparent 52%),linear-gradient(140deg,#0b1d38,#11152f)}
+.daily-card-visual .matchup-visual.compact{box-sizing:border-box;width:100%;min-width:0;max-width:none;min-height:100%;margin:0;padding:18px;border:0;border-radius:0;background:transparent;box-shadow:none}
+.daily-card-visual .sport-art-card{width:100%;height:100%;min-height:250px;border:0;border-radius:0}
+.daily-card-visual .boxing-poster{position:relative;isolation:isolate;overflow:hidden;width:100%;min-width:0;min-height:250px;display:flex;flex-direction:column;justify-content:space-between;padding:20px 18px;color:#fff;background:radial-gradient(ellipse at 22% 72%,rgba(253,69,105,.38),transparent 42%),radial-gradient(ellipse at 80% 35%,rgba(39,168,255,.38),transparent 44%),linear-gradient(140deg,#211023,#07192f 58%,#101431)}
+.daily-card-visual .boxing-poster:before{content:"";position:absolute;z-index:-1;inset:15% 8%;border:1px solid rgba(255,255,255,.17);border-radius:50%;transform:rotate(-16deg) scaleX(1.25);box-shadow:0 0 0 18px rgba(255,255,255,.025),0 0 0 38px rgba(255,255,255,.018)}
+.daily-card-visual .boxing-poster img{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;opacity:.78}
+.daily-card-visual .mma-fighter-photos{position:absolute;z-index:-2;inset:0;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.daily-card-visual .mma-fighter-photo{position:relative;min-width:0;overflow:hidden;display:grid;place-items:center;background:linear-gradient(150deg,rgba(255,55,79,.38),rgba(12,20,33,.7) 70%)}
+.daily-card-visual .mma-fighter-photo+ .mma-fighter-photo{background:linear-gradient(150deg,rgba(255,145,56,.38),rgba(12,20,33,.7) 70%)}
+.daily-card-visual .mma-fighter-photo img,.daily-card-visual .mma-event-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 20%;opacity:.78}
+.daily-card-body{min-width:0;align-self:center;padding:22px 28px}
+.daily-card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.daily-event-status{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid rgba(115,158,205,.24);border-radius:999px;color:#b9cbe0;background:rgba(10,25,45,.75);font-size:10px;font-weight:900;letter-spacing:.06em}
+.daily-event-status.is-live{border-color:rgba(255,82,110,.48);color:#ff9aaa;background:rgba(75,19,34,.62)}
+.daily-event-date{margin:14px 0 5px;color:#79beff;font-size:12px;font-weight:800}
+.daily-card-body h3{margin:5px 0 8px;font-size:clamp(22px,3.2vw,36px);line-height:1.08;letter-spacing:-.035em;overflow-wrap:anywhere}
+.daily-event-league{margin:0;color:#93aac8;font-size:12px}
+.daily-card-body .scoreline{margin-top:10px}
+.daily-card-body .watch-row{margin-top:10px}
+.daily-card-body .reminder-actions{margin-top:10px}
+.daily-card-body .google-feed-btn{display:inline-flex;margin-top:10px}
+.daily-slider .slide-btn{position:absolute;z-index:3;top:58%;transform:translateY(-50%);width:38px;height:48px;border:1px solid rgba(111,171,255,.26);border-radius:13px;background:rgba(3,11,25,.9);color:#fff;font-size:26px;cursor:pointer}
+.daily-slider .slide-btn.prev{left:14px}.daily-slider .slide-btn.next{right:14px}
+.daily-slider .daily-empty{display:block}
+.daily-empty .daily-event-card{grid-template-columns:1fr;min-height:150px}
+.daily-empty .daily-card-body{padding:24px 28px}
+@media(max-width:720px){.sports-slider.daily-slider{padding:14px 12px 15px;border-radius:18px}.daily-slider-heading{align-items:flex-start;margin:0 4px 12px}.daily-slider-heading p{max-width:270px;font-size:10px}.daily-count{padding:6px 8px;font-size:10px}.daily-event-card{grid-template-columns:1fr;min-height:0}.daily-card-visual{min-height:155px;height:155px}.daily-card-visual .matchup-visual.compact{min-height:155px}.daily-card-visual .boxing-poster,.daily-card-visual .sport-art-card{min-height:155px}.daily-card-visual .sport-art-card .sport-art-icon{font-size:105px}.daily-card-body{padding:16px 17px}.daily-card-body h3{font-size:24px}.daily-slider .slide-btn{top:89px;width:34px;height:40px}.daily-slider .slide-btn.prev{left:17px}.daily-slider .slide-btn.next{right:17px}.daily-empty .daily-card-body{padding:20px}}

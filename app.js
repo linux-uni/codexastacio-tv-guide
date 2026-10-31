@@ -74,6 +74,7 @@ const ENGLISH_COPY=[
  ["Cuenta","Account"],["Cancelar","Cancel"],["Guardar","Save"],["Eventos deportivos especiales","Special sports events"],
  ["La tarjeta se actualizará cuando haya un evento anunciado.","This card will update when an event is announced."],
  ["Programación por actualizar","Schedule to be updated"]
+ ,["AGENDA DEL DÍA","TODAY’S SCHEDULE"],["Eventos deportivos de hoy","Today’s sports events"],["Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado","Boxing · UFC/MMA · MLB · NFL · NHL · Formula 1 · Champions League and top soccer"],["Cargando eventos deportivos…","Loading sports events…"],["Sin eventos activos ahora","No active events right now"],["La agenda se actualiza automáticamente. Los eventos finalizados se retiran.","The schedule updates automatically. Finished events are removed."],["Sin eventos activos","No active events"],["eventos","events"],["Horario por confirmar","Time to be confirmed"]
 ].sort((a,b)=>b[0].length-a[0].length);
 function translateCopy(value){
  if(state.language!=="en"||!value)return value;
@@ -126,7 +127,7 @@ const OFFICIAL_SCHEDULES={
  BOXEO:"https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule"
 };
 function officialScheduleLink(e){const k=leagueKey(e);return k?OFFICIAL_SCHEDULES[k]||"":""}
-function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(s.includes("basketball"))return "NBA";return ""}
+function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
 
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
@@ -428,7 +429,7 @@ const ESPN_SPORT_FEEDS={
  TENIS:{paths:["tennis/atp","tennis/wta"],sport:"Tennis",league:"Tennis"},
  F1:{paths:["racing/f1"],sport:"Formula 1",league:"Formula 1"},
  NHL:{paths:["hockey/nhl"],sport:"Ice Hockey",league:"NHL"},
- SOCCER:{paths:["soccer/eng.1"],sport:"Soccer",league:"Premier League"}
+ SOCCER:{paths:["soccer/eng.1","soccer/esp.1","soccer/ita.1","soccer/ger.1"],sport:"Soccer",league:"Soccer"}
 };
 function espnNames(event,competition){
  const rows=[...(event?.broadcasts||[]),...(competition?.broadcasts||[]),...(competition?.geoBroadcasts||[])];
@@ -450,7 +451,7 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
  const names=espnNames(event,competition);
  const eventName=(homeName&&awayName)?homeName+" vs "+awayName:(event?.name||event?.shortName||feedKey);
  const tournament=feedKey==="TENIS"&&event?.name?event.name:"";
- const league=feedKey==="SOCCER"?"Premier League":
+ const league=feedKey==="SOCCER"?(path.includes("esp.1")?"La Liga":path.includes("ita.1")?"Serie A":path.includes("ger.1")?"Bundesliga":"Premier League"):
   feedKey==="TENIS"?((path.includes("/atp")?"ATP":"WTA")+(tournament?" • "+tournament:"")):
   feedKey==="NCAA"?String(event?.season?.type?.name||"NCAA")+" • "+(event?.name||path.split("/").pop()):
   feedKey==="UFC"?(event?.name&&event.name!==eventName?"UFC • "+event.name:"UFC"):
@@ -496,6 +497,13 @@ function footballFilter(e){return sportMatches(e,"Fútbol")&&(footballLeague==="
 function footballLeagueSelector(){if(state.sport!=="Fútbol")return "";const found=[...new Set(scheduleEvents.filter(e=>sportMatches(e,"Fútbol")).map(footballCompetition))];const leagues=[...new Set(["Todas",...FOOTBALL_COMPETITIONS,...found])];return '<div class="football-league-picker"><label for="footballLeague">Liga o copa</label><select id="footballLeague">'+leagues.map(x=>'<option value="'+esc(x)+'"'+(footballLeague===x?' selected':'')+'>'+esc(x)+'</option>').join("")+'</select></div>'}
 function eventLive(e){const s=String(e.strStatus||"").toUpperCase(),p=String(e.strProgress||"");return /^(1H|2H|HT|ET|PEN|LIVE|IN PLAY|Q[1-4])$/.test(s)||/^\\d{1,3}(\\+\\d+)?['′]?$/.test(p)}
 function eventFinished(e){const s=String(e?.strStatus||"").toLowerCase();return /final|finished|completed|full time|game over|match ended/.test(s)}
+function sliderEventActive(e,now=Date.now()){
+ if(eventFinished(e))return false;
+ const start=eventStartInstant(e);
+ if(!start||start.getTime()>now||eventLive(e))return true;
+ const category=leagueKey(e),hours=/BOXEO|UFC\/MMA/.test(category)?10:category==="F1"?6:category==="NFL"||category==="MLB"?7:4;
+ return now-start.getTime()<hours*60*60*1000;
+}
 function eventStateBadge(e){
  if(eventLive(e))return '<span class="event-state live">● EN VIVO</span>';
  if(eventFinished(e))return '<span class="event-state finished">FINALIZADO</span>';
@@ -740,7 +748,7 @@ async function loadSchedule(silent=false){
  }
 }
 
-function heroSlider(){return `<section class="sports-slider"><button id="slidePrev" class="slide-btn prev" aria-label="Anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="hero-overlay"><span class="badge">SPORTS</span><h1>Próximos eventos deportivos</h1><p>Cargando programación…</p></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente">›</button></section>`}
+function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
  const filteredEvents=state.sport==="Todos"?events:events.filter(e=>e.sport===state.sport);
@@ -970,16 +978,20 @@ function setupSlider(){
 }
 function showSlide(step=0){
  const hero=document.getElementById("sportsHero");if(!hero)return;
+ sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&sliderEventActive(e));
+ const count=document.getElementById("dailySliderCount");
  if(!sliderEvents.length){
-  hero.className="hero-slide";hero.style.backgroundImage="";
-  hero.innerHTML='<div class="hero-overlay"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h1>Sin eventos deportivos para hoy</h1><p>La agenda se renueva automáticamente con los eventos del día.</p></div>';
+  if(count)count.textContent="Sin eventos activos";
+  hero.className="hero-slide daily-empty";hero.style.backgroundImage="";
+  hero.innerHTML='<div class="daily-event-card"><div class="daily-card-body"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h3>No hay eventos activos ahora</h3><p class="muted">La agenda se actualiza automáticamente. Los eventos finalizados se retiran.</p></div></div>';
   return;
  }
  slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
- const e=sliderEvents[slideIndex],img=e.strThumb||e.strPoster||e.strFanart||"",key=leagueKey(e),feed=officialScheduleLink(e);
- hero.className="hero-slide "+(key?"feed-"+key.toLowerCase():"")+(img?"":" hero-fallback");
- hero.style.backgroundImage=img?'linear-gradient(90deg,rgba(2,8,20,.96),rgba(2,8,20,.40) 48%,rgba(2,8,20,.12)),url("'+esc(img)+'")':"";
- hero.innerHTML=(img?"":sportArtwork(e,"hero"))+'<div class="hero-overlay">'+matchupVisual(e)+scoreBadge(e)+'<span class="badge">HOY • '+esc(key||e.strSport||"DEPORTE")+'</span><h1>'+esc(e.strEvent||e.title||"Evento deportivo de hoy")+'</h1><p>'+esc([e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "))+'</p>'+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div>';
+ if(count)count.textContent=`${slideIndex+1} / ${sliderEvents.length} eventos`;
+ const e=sliderEvents[slideIndex],key=leagueKey(e)||e.strSport||"DEPORTE",feed=officialScheduleLink(e),visual=matchupVisual(e,true)||sportArtwork(e,"card");
+ const live=eventLive(e),stateLabel=live?"EN VIVO":eventFinished(e)?"FINALIZADO":"PRÓXIMO";
+ hero.className="hero-slide daily-card-stage "+(key?"feed-"+String(key).toLowerCase().replace(/[^a-z0-9]+/g,"-"):"");hero.style.backgroundImage="";
+ hero.innerHTML='<article class="daily-event-card"><div class="daily-card-visual">'+visual+'</div><div class="daily-card-body"><div class="daily-card-top"><span class="badge">'+esc(key)+'</span><span class="daily-event-status '+(live?"is-live":"")+'">'+(live?'● ':"")+stateLabel+'</span></div><p class="daily-event-date">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" · ")||"Horario por confirmar")+'</p><h3>'+esc(e.strEvent||e.title||"Evento deportivo")+'</h3><p class="daily-event-league">'+esc(e.strLeague||e.strSport||"")+'</p>'+scoreBadge(e)+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener noreferrer">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div></article>';
 }
 function sliderLocalDate(e){
  if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
@@ -1005,10 +1017,14 @@ async function loadSportsSlider(force=false){
    championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
-  const events=[...general,...mlb,...nhl,...ucl,...espn].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
+  const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today&&sliderEventActive(e));
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
-   .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""))).slice(0,36);
+   .sort((a,b)=>{
+    const priority=e=>({"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
+    return priority(a)-priority(b)||String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""));
+   }).slice(0,48);
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
   showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
