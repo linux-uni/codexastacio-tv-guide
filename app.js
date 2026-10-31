@@ -976,6 +976,10 @@ function setupSlider(){
  }
  loadSportsSlider(false);
 }
+function shuffleDailyEvents(avoidKey=""){
+ for(let i=sliderEvents.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sliderEvents[i],sliderEvents[j]]=[sliderEvents[j],sliderEvents[i]]}
+ if(avoidKey&&sliderEvents.length>1&&sliderEventKey(sliderEvents[0])===avoidKey){const swap=1+Math.floor(Math.random()*(sliderEvents.length-1));[sliderEvents[0],sliderEvents[swap]]=[sliderEvents[swap],sliderEvents[0]]}
+}
 function showSlide(step=0){
  const hero=document.getElementById("sportsHero");if(!hero)return;
  sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&sliderEventActive(e));
@@ -986,6 +990,8 @@ function showSlide(step=0){
   hero.innerHTML='<div class="daily-event-card"><div class="daily-card-body"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h3>No hay eventos activos ahora</h3><p class="muted">La agenda se actualiza automáticamente. Los eventos finalizados se retiran.</p></div></div>';
   return;
  }
+ if(slideIndex>=sliderEvents.length)slideIndex=sliderEvents.length-1;
+ if(step>0&&sliderEvents.length>1&&slideIndex>=sliderEvents.length-1){const previousKey=sliderEventKey(sliderEvents[slideIndex]);shuffleDailyEvents(previousKey);slideIndex=-1}
  slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
  if(count)count.textContent=`${slideIndex+1} / ${sliderEvents.length} eventos`;
  const e=sliderEvents[slideIndex],key=leagueKey(e)||e.strSport||"DEPORTE",feed=officialScheduleLink(e),visual=matchupVisual(e,true)||sportArtwork(e,"card");
@@ -1025,6 +1031,7 @@ async function loadSportsSlider(force=false){
     const priority=e=>({"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
     return priority(a)-priority(b)||String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""));
    }).slice(0,48);
+  shuffleDailyEvents();
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
   showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
