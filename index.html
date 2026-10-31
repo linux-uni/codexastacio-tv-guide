@@ -8,17 +8,32 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TV Listing App">
-<link rel="apple-touch-icon" href="./icons/icon-192.png?v=87">
+<link rel="apple-touch-icon" href="./icons/icon-192.png?v=88">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="./manifest.json?v=87">
+<link rel="manifest" href="./manifest.json?v=88">
 <meta name="description" content="TV Listing App de CodeXaStacio: canales, eventos y plataformas de streaming">
 <title>TV Listing App</title>
-<link rel="stylesheet" href="./styles.css?v=87">
+<link rel="stylesheet" href="./styles.css?v=88">
+<script>
+(()=>{
+ const end=Date.parse("2026-11-01T19:00:00Z");
+ const apply=()=>{
+  const active=Date.now()<end;
+  document.documentElement.classList.toggle("halloween-theme",active);
+  const color=document.querySelector('meta[name="theme-color"]');
+  if(color)color.content=active?"#20102b":"#061126";
+ };
+ apply();
+ if(Date.now()<end)setTimeout(apply,Math.max(0,end-Date.now()+50));
+ document.addEventListener("visibilitychange",apply);
+ window.addEventListener("pageshow",apply);
+})();
+</script>
 </head>
 <body>
 <div id="app"><main class="wrap"><section class="panel login"><div class="brand">TV Listing App</div><p class="muted">TV Listing App • CodeXaStacio</p></section></main></div>
-<script src="./champions.js?v=87"></script>
-<script src="./app.js?v=87"></script>
+<script src="./champions.js?v=88"></script>
+<script src="./app.js?v=88"></script>
 <noscript><main class="wrap"><section class="panel login"><div class="brand">TV Listing App</div><p class="danger">JavaScript está desactivado en este navegador.</p></section></main></noscript>
 </body>
 </html>

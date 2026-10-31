@@ -323,3 +323,26 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .daily-empty .daily-event-card{grid-template-columns:1fr;min-height:150px}
 .daily-empty .daily-card-body{padding:24px 28px}
 @media(max-width:720px){.sports-slider.daily-slider{padding:14px 12px 15px;border-radius:18px}.daily-slider-heading{align-items:flex-start;margin:0 4px 12px}.daily-slider-heading p{max-width:270px;font-size:10px}.daily-count{padding:6px 8px;font-size:10px}.daily-event-card{grid-template-columns:1fr;min-height:0}.daily-card-visual{min-height:155px;height:155px}.daily-card-visual .matchup-visual.compact{min-height:155px}.daily-card-visual .boxing-poster,.daily-card-visual .sport-art-card{min-height:155px}.daily-card-visual .sport-art-card .sport-art-icon{font-size:105px}.daily-card-body{padding:16px 17px}.daily-card-body h3{font-size:24px}.daily-slider .slide-btn{top:89px;width:34px;height:40px}.daily-slider .slide-btn.prev{left:17px}.daily-slider .slide-btn.next{right:17px}.daily-empty .daily-card-body{padding:20px}}
+
+/* Halloween theme: automatically active until Nov 1, 2026 at 3 p.m. AST. */
+html.halloween-theme body{
+ --bg:#10091a;--panel:#1a1025;--card:#21132d;--line:#493052;--text:#fff8f0;--muted:#c1a8c8;--blue:#ff8b35;--blue2:#d94d16;--red:#ff5478;--green:#7bdfa2;
+ background:radial-gradient(ellipse at 12% -8%,rgba(255,117,35,.22),transparent 32%),radial-gradient(ellipse at 88% 0,rgba(137,47,179,.28),transparent 30%),linear-gradient(160deg,#10091a,#090711 70%);
+}
+html.halloween-theme .panel,html.halloween-theme .card{border-color:rgba(196,113,65,.36);background:linear-gradient(155deg,rgba(36,20,43,.97),rgba(16,12,26,.98))}
+html.halloween-theme .brand:before{content:"🎃";color:inherit;font-size:.82em;vertical-align:1px}
+html.halloween-theme .cx-symbol,html.halloween-theme .cx-emblem{background:linear-gradient(145deg,#ff9c3d,#8d39a8)!important;box-shadow:0 0 30px rgba(255,119,49,.28)}
+html.halloween-theme .cx-login-title span,html.halloween-theme .cx-login-sub{color:#ffad65}
+html.halloween-theme .login{border-color:rgba(238,133,64,.5);box-shadow:0 28px 90px rgba(0,0,0,.7),0 0 50px rgba(227,104,45,.12)}
+html.halloween-theme .login-hero{background:radial-gradient(circle at 50% 15%,rgba(255,131,52,.26),transparent 46%),radial-gradient(circle at 90% 80%,rgba(151,57,171,.16),transparent 38%),linear-gradient(180deg,#25132d,#171020 78%)}
+html.halloween-theme .login .input,html.halloween-theme .input{background:#160e20;border-color:#573859}
+html.halloween-theme .login .input:focus,html.halloween-theme .input:focus{border-color:#ff9746;box-shadow:0 0 0 3px rgba(255,151,70,.18)}
+html.halloween-theme .btn.primary,html.halloween-theme .chip.active{background:linear-gradient(135deg,#ff9a42,#d74620 58%,#8737a6);border-color:#ffad65}
+html.halloween-theme .nav .btn.active{border-color:#ff9946;color:#ffbd7d}
+html.halloween-theme .chip:before{color:#ff9746}
+html.halloween-theme .daily-slider{border-color:rgba(244,140,72,.32);background:radial-gradient(ellipse at 90% 0,rgba(142,51,166,.2),transparent 38%),linear-gradient(145deg,#21132d,#100a19 75%)}
+html.halloween-theme .daily-card-visual{background:radial-gradient(circle at 35% 25%,rgba(255,139,53,.3),transparent 52%),linear-gradient(140deg,#29152e,#171020)}
+html.halloween-theme .daily-event-date,html.halloween-theme .daily-kicker{color:#ffad65}
+html.halloween-theme .daily-count,html.halloween-theme .badge,html.halloween-theme .daily-event-status{border-color:rgba(235,148,87,.28);background:rgba(44,24,45,.8)}
+html.halloween-theme .daily-slider .slide-btn{border-color:rgba(243,152,83,.4);background:rgba(25,14,30,.93)}
+@media(prefers-reduced-motion:no-preference){html.halloween-theme .login-hero{background-size:100% 100%;animation:halloween-glow 7s ease-in-out infinite alternate}@keyframes halloween-glow{to{filter:brightness(1.12)}}}
