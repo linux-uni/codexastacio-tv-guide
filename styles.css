@@ -357,3 +357,17 @@ html.halloween-theme .card:hover{border-color:rgba(227,106,67,.65);box-shadow:0 
 @keyframes halloween-heartbeat{0%,100%{box-shadow:0 28px 90px rgba(0,0,0,.76),0 0 30px rgba(152,43,47,.12)}50%{box-shadow:0 28px 90px rgba(0,0,0,.76),0 0 53px rgba(152,43,47,.23)}}
 @keyframes halloween-shadow-pulse{0%,100%{box-shadow:0 22px 70px rgba(0,0,0,.34),0 0 24px rgba(111,37,82,.08)}50%{box-shadow:0 22px 70px rgba(0,0,0,.45),0 0 42px rgba(133,37,57,.17)}}
 @media(prefers-reduced-motion:reduce){html.halloween-theme *,html.halloween-theme *::before,html.halloween-theme *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+
+/* v90: make the seasonal look unmistakably Halloween, with lightweight decorations. */
+html.halloween-theme .login-hero::before{content:"👻";position:absolute;left:10px;bottom:9px;font-size:29px;opacity:.76;filter:drop-shadow(0 0 10px rgba(192,150,255,.52));animation:halloween-ghost-float 4s ease-in-out infinite}
+html.halloween-theme .login-hero::after{content:"🕸️";right:7px;top:5px;font-size:31px;opacity:.76;filter:drop-shadow(0 0 7px rgba(224,159,255,.28))}
+html.halloween-theme .daily-kicker::before{content:"🎃";display:inline-block;margin-right:7px;font-size:17px;vertical-align:-2px;filter:drop-shadow(0 0 7px rgba(255,125,43,.45));animation:halloween-pumpkin-glow 3.5s ease-in-out infinite}
+html.halloween-theme .daily-slider{position:relative;isolation:isolate;overflow:hidden}
+html.halloween-theme .daily-slider::after{content:"🕸️";position:absolute;z-index:1;left:10px;bottom:0;font-size:19px;opacity:.72;pointer-events:none;filter:drop-shadow(0 0 6px rgba(204,128,232,.35))}
+html.halloween-theme .daily-card-visual::before{content:"🕷️";position:absolute;z-index:2;right:11px;top:8px;font-size:19px;opacity:.78;pointer-events:none;filter:drop-shadow(0 0 5px #000);animation:halloween-spider-drop 5s ease-in-out infinite}
+html.halloween-theme .daily-card-visual::after{content:"👻";position:absolute;z-index:2;left:11px;bottom:9px;font-size:21px;opacity:.68;pointer-events:none;filter:drop-shadow(0 0 6px rgba(213,183,255,.5));animation:halloween-ghost-float 4.7s ease-in-out infinite reverse}
+html.halloween-theme .daily-slider-heading h2{color:#fff8f2;text-shadow:0 2px 18px rgba(219,91,66,.19)}
+html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
+@keyframes halloween-ghost-float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+@keyframes halloween-spider-drop{0%,100%{transform:translateY(-2px)}50%{transform:translateY(8px)}}
+@keyframes halloween-pumpkin-glow{0%,100%{transform:scale(1);filter:drop-shadow(0 0 5px rgba(255,125,43,.35))}50%{transform:scale(1.1);filter:drop-shadow(0 0 12px rgba(255,125,43,.78))}}
