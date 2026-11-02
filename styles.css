@@ -428,9 +428,9 @@ html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 .account-menu-trigger[aria-expanded="true"] svg path{transform:translateY(0);stroke:#dff7ff}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .head-slogan .language-toggle{position:relative;z-index:2;display:grid;place-items:center;width:34px;height:34px;min-height:34px;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#43dcff!important;line-height:1;filter:drop-shadow(0 0 7px rgba(35,203,255,.52));transition:transform .2s ease,filter .2s ease}
-.head-slogan .language-toggle svg{animation:globe-spin 8s linear infinite;transform-origin:50% 50%}
+.head-slogan .language-toggle svg{-webkit-animation:globe-spin 2.4s linear infinite;animation:globe-spin 2.4s linear infinite;transform-origin:50% 50%;will-change:transform}
 @keyframes globe-spin{to{transform:rotate(360deg)}}
 .head-slogan .language-toggle svg{width:25px;height:25px;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none}
 .head-slogan .language-toggle:hover,.head-slogan .language-toggle:focus-visible{transform:scale(1.12);filter:drop-shadow(0 0 11px rgba(35,220,255,.8));outline:none}
 @media(max-width:760px){.top #account{font-size:initial;width:52px;height:52px;padding:0;border-radius:50%}.top #account:after{content:none}}
-@media(prefers-reduced-motion:reduce){.account-menu-trigger,.head-slogan .language-toggle{transition:none}.head-slogan .language-toggle svg{animation:none}}
+@media(prefers-reduced-motion:reduce){.account-menu-trigger,.head-slogan .language-toggle{transition:none}.head-slogan .language-toggle svg{-webkit-animation-duration:7s;animation-duration:7s}}
