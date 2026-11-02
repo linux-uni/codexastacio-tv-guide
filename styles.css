@@ -362,32 +362,14 @@ html.halloween-theme .card:hover{border-color:rgba(227,106,67,.65);box-shadow:0 
 
 /* v93 combat card artwork: show both athletes clearly and keep fight copy off their faces. */
 .mma-fighter-photo.has-photo b{display:none}
-.provider-event .mma-fighter-photo img,.schedule-card .mma-fighter-photo img,.daily-card-visual .mma-fighter-photo img{object-fit:cover;object-position:center 14%;opacity:1;filter:saturate(1.08) contrast(1.02);mix-blend-mode:normal}
+.provider-event .mma-fighter-photo img,.schedule-card .mma-fighter-photo img,.daily-card-visual .mma-fighter-photo img{object-fit:cover;object-position:center 14%;opacity:1;filter:saturate(1.12) contrast(1.04) brightness(1.12);mix-blend-mode:normal}
 .provider-event .mma-fighter-photos,.schedule-card .mma-fighter-photos,.daily-card-visual .mma-fighter-photos{background:#0b1020}
+.schedule-card .mma-fighter-photos,.daily-card-visual .mma-fighter-photos{z-index:0}
 .schedule-card .boxing-poster.mma-poster,.daily-card-visual .boxing-poster.mma-poster{padding:17px 15px 14px}
 .schedule-card .mma-poster:before,.daily-card-visual .mma-poster:before{content:"";position:absolute;z-index:0;inset:6% 5%;border:0;border-radius:0;transform:none;box-shadow:none;pointer-events:none;background:center/100% 100% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 220'%3E%3Cpath d='M72 18h256l54 48v88l-54 48H72l-54-48V66z' fill='none' stroke='%23ffd5da' stroke-opacity='.58' stroke-width='2'/%3E%3Cpath d='M72 30h256M41 74h318M18 110h364M41 146h318M72 190h256' fill='none' stroke='%23fff' stroke-opacity='.15' stroke-width='1'/%3E%3Cpath d='M54 38v144M346 38v144' fill='none' stroke='%23ff6477' stroke-opacity='.3' stroke-width='2'/%3E%3C/svg%3E")}
-.schedule-card .mma-poster:after,.daily-card-visual .mma-poster:after{content:"";position:absolute;z-index:1;inset:0;height:auto;pointer-events:none;background:linear-gradient(180deg,rgba(4,8,18,.05) 4%,rgba(5,8,17,.03) 42%,rgba(4,8,18,.94) 100%)}
-.schedule-card .mma-poster>.boxing-poster-label,.schedule-card .mma-poster>.boxing-poster-match,.schedule-card .mma-poster>.boxing-poster-location,.daily-card-visual .mma-poster>.boxing-poster-label,.daily-card-visual .mma-poster>.boxing-poster-match,.daily-card-visual .mma-poster>.boxing-poster-location{position:absolute;z-index:2;margin:0}
+.schedule-card .mma-poster:after,.daily-card-visual .mma-poster:after{content:"";position:absolute;z-index:2;inset:0;height:auto;pointer-events:none;background:linear-gradient(180deg,rgba(4,8,18,0) 8%,rgba(5,8,17,.04) 48%,rgba(4,8,18,.76) 100%)}
+.schedule-card .mma-poster>.boxing-poster-label,.schedule-card .mma-poster>.boxing-poster-match,.schedule-card .mma-poster>.boxing-poster-location,.daily-card-visual .mma-poster>.boxing-poster-label,.daily-card-visual .mma-poster>.boxing-poster-match,.daily-card-visual .mma-poster>.boxing-poster-location{position:absolute;z-index:3;margin:0}
 .schedule-card .mma-poster>.boxing-poster-label,.daily-card-visual .mma-poster>.boxing-poster-label{top:14px;left:16px;padding:5px 8px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:rgba(8,11,22,.64);font-size:9px;letter-spacing:.2em}
 .schedule-card .mma-poster>.boxing-poster-match,.daily-card-visual .mma-poster>.boxing-poster-match{right:12px;bottom:35px;left:12px;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:6px;text-shadow:0 2px 10px #050710}
 .schedule-card .mma-poster .boxing-poster-match b,.daily-card-visual .mma-poster .boxing-poster-match b{font-size:clamp(11px,2.3vw,17px);line-height:1.05;overflow-wrap:anywhere}
 .schedule-card .mma-poster .boxing-poster-match strong,.daily-card-visual .mma-poster .boxing-poster-match strong{font-size:12px;color:#ffb6c0}
-.schedule-card .mma-poster>.boxing-poster-location,.daily-card-visual .mma-poster>.boxing-poster-location{right:15px;bottom:13px;left:15px;font-size:9px;color:#dce5f6}
-.provider-event .mma-poster.compact:before{content:"";position:absolute;z-index:1;inset:7% 5%;border:1px solid rgba(255,226,231,.48);border-radius:24% / 32%;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
-.provider-event .mma-poster.compact>.boxing-poster-label,.provider-event .mma-poster.compact>.boxing-poster-match,.provider-event .mma-poster.compact>.boxing-poster-location{position:relative;z-index:2}
-.daily-card-visual .boxing-poster:not(.mma-poster):before,.schedule-card .boxing-poster:not(.mma-poster):before{border-color:rgba(255,255,255,.26);background:radial-gradient(ellipse at 50% 44%,rgba(255,128,66,.11),transparent 58%)}
-@media(max-width:700px){.schedule-card .mma-poster>.boxing-poster-match,.daily-card-visual .mma-poster>.boxing-poster-match{bottom:33px}.schedule-card .mma-poster .boxing-poster-match b,.daily-card-visual .mma-poster .boxing-poster-match b{font-size:clamp(10px,3.1vw,15px)}.schedule-card .mma-poster>.boxing-poster-label,.daily-card-visual .mma-poster>.boxing-poster-label{top:10px;left:11px}.schedule-card .mma-poster>.boxing-poster-location,.daily-card-visual .mma-poster>.boxing-poster-location{bottom:11px}}
-
-/* v90: make the seasonal look unmistakably Halloween, with lightweight decorations. */
-html.halloween-theme .login-hero::before{content:"👻";position:absolute;left:10px;bottom:9px;font-size:29px;opacity:.76;filter:drop-shadow(0 0 10px rgba(192,150,255,.52));animation:halloween-ghost-float 4s ease-in-out infinite}
-html.halloween-theme .login-hero::after{content:"🕸️";right:7px;top:5px;font-size:31px;opacity:.76;filter:drop-shadow(0 0 7px rgba(224,159,255,.28))}
-html.halloween-theme .daily-kicker::before{content:"🎃";display:inline-block;margin-right:7px;font-size:17px;vertical-align:-2px;filter:drop-shadow(0 0 7px rgba(255,125,43,.45));animation:halloween-pumpkin-glow 3.5s ease-in-out infinite}
-html.halloween-theme .daily-slider{position:relative;isolation:isolate;overflow:hidden}
-html.halloween-theme .daily-slider::after{content:"🕸️";position:absolute;z-index:1;left:10px;bottom:0;font-size:19px;opacity:.72;pointer-events:none;filter:drop-shadow(0 0 6px rgba(204,128,232,.35))}
-html.halloween-theme .daily-card-visual::before{content:"🕷️";position:absolute;z-index:2;right:11px;top:8px;font-size:19px;opacity:.78;pointer-events:none;filter:drop-shadow(0 0 5px #000);animation:halloween-spider-drop 5s ease-in-out infinite}
-html.halloween-theme .daily-card-visual::after{content:"👻";position:absolute;z-index:2;left:11px;bottom:9px;font-size:21px;opacity:.68;pointer-events:none;filter:drop-shadow(0 0 6px rgba(213,183,255,.5));animation:halloween-ghost-float 4.7s ease-in-out infinite reverse}
-html.halloween-theme .daily-slider-heading h2{color:#fff8f2;text-shadow:0 2px 18px rgba(219,91,66,.19)}
-html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
-@keyframes halloween-ghost-float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
-@keyframes halloween-spider-drop{0%,100%{transform:translateY(-2px)}50%{transform:translateY(8px)}}
-@keyframes halloween-pumpkin-glow{0%,100%{transform:scale(1);filter:drop-shadow(0 0 5px rgba(255,125,43,.35))}50%{transform:scale(1.1);filter:drop-shadow(0 0 12px rgba(255,125,43,.78))}}
