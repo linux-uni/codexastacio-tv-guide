@@ -178,7 +178,7 @@ function boxingPoster(e,compact=false){
  const src=officialPosters.find(x=>x.match.test(words))?.src||[e?.strEventThumb,e?.strThumb,e?._poster,e?._image].find(v=>typeof v==="string"&&/^https?:\/\//i.test(v))||"";
  const homePhoto=e?.strHomePlayerThumb||e?.strHomePlayerLogo||e?._homePhoto||teamLogo(e,"home")||boxingFighterPhoto(home);
  const awayPhoto=e?.strAwayPlayerThumb||e?.strAwayPlayerLogo||e?._awayPhoto||teamLogo(e,"away")||boxingFighterPhoto(away);
- const fighterPhoto=(name,image)=>'<div class="mma-fighter-photo"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(image?'<img src="'+esc(image)+'" alt="Foto de '+esc(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div>';
+ const fighterPhoto=(name,image)=>'<div class="mma-fighter-photo'+(image?' has-photo':'')+'"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(image?'<img src="'+esc(image)+'" alt="Foto de '+esc(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove();this.parentElement.classList.remove(\'has-photo\')">':'')+'</div>';
  const imageLayer=src?'<img class="boxing-event-poster" src="'+esc(src)+'" alt="Foto del evento '+esc(home)+' vs '+esc(away)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'<div class="mma-fighter-photos boxing-fighter-photos">'+fighterPhoto(home,homePhoto)+fighterPhoto(away,awayPhoto)+'</div>';
  const location=String(e?.strLeague||"Boxeo");
  return '<div class="boxing-poster '+(compact?"compact":"")+(src?" has-image":"")+'" role="img" aria-label="Cartelera de boxeo: '+esc(home)+' contra '+esc(away)+'">'+
@@ -195,7 +195,7 @@ function mmaPoster(e,compact=false){
  const officialSrc=isHeadliner?eventPoster:"";
  const homePhoto=teamLogo(e,"home"),awayPhoto=teamLogo(e,"away");
  const league=String(e?.strLeague||"UFC · MMA");
- const fighterPhoto=(name,src)=>'<div class="mma-fighter-photo"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(src?'<img src="'+esc(src)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div>';
+ const fighterPhoto=(name,src)=>'<div class="mma-fighter-photo'+(src?' has-photo':'')+'"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(src?'<img src="'+esc(src)+'" alt="Foto de '+esc(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove();this.parentElement.classList.remove(\'has-photo\')">':'')+'</div>';
  return '<div class="boxing-poster mma-poster '+(compact?"compact":"")+(officialSrc?" has-image":"")+'" role="img" aria-label="Cartelera UFC/MMA: '+esc(home)+' contra '+esc(away)+'">'+
   (officialSrc?'<img class="mma-event-poster" src="'+esc(officialSrc)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'<div class="mma-fighter-photos">'+fighterPhoto(home,homePhoto)+fighterPhoto(away,awayPhoto)+'</div>')+
   '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">UFC · MMA</span>'+
