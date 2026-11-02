@@ -380,18 +380,20 @@ html.halloween-theme .card:hover{border-color:rgba(227,106,67,.65);box-shadow:0 
 @media(max-width:700px){.schedule-card .mma-poster>.boxing-poster-match,.daily-card-visual .mma-poster>.boxing-poster-match{bottom:33px}.schedule-card .mma-poster .boxing-poster-match b,.daily-card-visual .mma-poster .boxing-poster-match b{font-size:clamp(10px,3.1vw,15px)}.schedule-card .mma-poster>.boxing-poster-label,.daily-card-visual .mma-poster>.boxing-poster-label{top:10px;left:11px}.schedule-card .mma-poster>.boxing-poster-location,.daily-card-visual .mma-poster>.boxing-poster-location{bottom:11px}}
 
 /* v95: sports banner with a continuously scrolling, accessible slogan. */
-.head-slogan{position:relative;isolation:isolate;justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:min(640px,100%);height:106px;min-width:0;overflow:hidden;padding:9px 14px;border:1px solid rgba(83,175,255,.4);border-radius:18px;text-align:center;line-height:1.05;background-image:linear-gradient(90deg,rgba(2,9,25,.08) 0%,rgba(2,9,25,.14) 17%,rgba(2,9,25,.96) 29%,rgba(2,9,25,.97) 71%,rgba(2,9,25,.16) 84%,rgba(2,9,25,.08) 100%),url("./assets/tv-listing-sports-banner.jpg");background-size:cover;background-position:center;box-shadow:0 12px 34px rgba(0,8,28,.45),0 0 25px rgba(20,145,255,.16);animation:slogan-panel-glow 7s ease-in-out infinite alternate}
-.slogan-marquee{position:relative;width:100%;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.head-slogan{position:relative;isolation:isolate;justify-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:min(640px,100%);height:106px;min-width:0;overflow:hidden;padding:9px 14px;border:1px solid rgba(83,175,255,.4);border-radius:18px;text-align:center;line-height:1.05;background:#020c1f;box-shadow:0 12px 34px rgba(0,8,28,.45),0 0 25px rgba(20,145,255,.16);animation:slogan-panel-glow 7s ease-in-out infinite alternate}
+.head-slogan::before{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(2,9,25,.04) 0%,rgba(2,9,25,.12) 17%,rgba(2,9,25,.96) 29%,rgba(2,9,25,.97) 71%,rgba(2,9,25,.12) 84%,rgba(2,9,25,.04) 100%)}
+.head-slogan .slogan-banner-art{position:absolute;z-index:-1;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:1;pointer-events:none}
+.slogan-marquee{position:relative;z-index:1;width:100%;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
 .slogan-track{display:flex;align-items:center;width:max-content;will-change:transform;animation:slogan-scroll 21s linear infinite}
 .slogan-copy{display:flex;flex:0 0 auto;align-items:baseline;gap:10px;padding:0 24px;white-space:nowrap}
 .head-slogan .slogan-copy strong{display:inline-block;margin:0;color:#fff;font-size:clamp(19px,2.3vw,27px);font-weight:950;letter-spacing:-.025em;text-shadow:0 2px 12px #00102b,0 0 14px rgba(120,193,255,.4)}
 .head-slogan .slogan-copy span{display:inline-block;color:#05d7ff;font-size:clamp(12px,1.4vw,16px);font-weight:950;letter-spacing:.09em;text-transform:uppercase;text-shadow:0 2px 12px #00102b,0 0 14px rgba(0,187,255,.5)}
-.head-slogan .language-toggle{margin:0!important;padding:4px 10px!important;border-color:rgba(101,186,255,.35)!important;background:rgba(3,18,42,.82)!important;color:#e7f5ff;font-size:10px!important;line-height:1.1}
+.head-slogan .language-toggle{position:relative;z-index:2;display:grid;place-items:center;width:32px;height:28px;margin:0!important;padding:0!important;border-color:rgba(101,186,255,.35)!important;border-radius:50%!important;background:rgba(3,18,42,.86)!important;color:#e7f5ff;font-size:17px!important;line-height:1}
 .head-slogan:hover .slogan-track,.head-slogan:focus-within .slogan-track{animation-play-state:paused}
 @keyframes slogan-scroll{from{transform:translateX(0)}to{transform:translateX(-33.333333%)}}
 @keyframes slogan-panel-glow{from{box-shadow:0 12px 34px rgba(0,8,28,.45),0 0 18px rgba(20,145,255,.12)}to{box-shadow:0 12px 34px rgba(0,8,28,.45),0 0 32px rgba(20,145,255,.27)}}
 @media(max-width:760px){.head-slogan{grid-column:1/-1;grid-row:2;width:100%;height:96px;margin:8px 0 2px;padding:8px 10px}.head-slogan .slogan-copy{gap:8px;padding:0 18px}.head-slogan .slogan-copy strong{font-size:clamp(18px,5vw,23px)}.head-slogan .slogan-copy span{font-size:clamp(11px,3.1vw,14px)}.slogan-track{animation-duration:17s}}
-@media(prefers-reduced-motion:reduce){.slogan-track,.head-slogan{animation:none!important}.slogan-track{width:100%;justify-content:center;transform:none}.slogan-copy[aria-hidden="true"]{display:none}}
+@media(prefers-reduced-motion:reduce){.head-slogan{animation:none!important}.slogan-track{animation-duration:36s}}
 
 /* v90: make the seasonal look unmistakably Halloween, with lightweight decorations. */
 html.halloween-theme .login-hero::before{content:"👻";position:absolute;left:10px;bottom:9px;font-size:29px;opacity:.76;filter:drop-shadow(0 0 10px rgba(192,150,255,.52));animation:halloween-ghost-float 4s ease-in-out infinite}
@@ -404,5 +406,3 @@ html.halloween-theme .daily-card-visual::after{content:"👻";position:absolute;
 html.halloween-theme .daily-slider-heading h2{color:#fff8f2;text-shadow:0 2px 18px rgba(219,91,66,.19)}
 html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 @keyframes halloween-ghost-float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
-@keyframes halloween-spider-drop{0%,100%{transform:translateY(-2px)}50%{transform:translateY(8px)}}
-@keyframes halloween-pumpkin-glow{0%,100%{transform:scale(1);filter:drop-shadow(0 0 5px rgba(255,125,43,.35))}50%{transform:scale(1.1);filter:drop-shadow(0 0 12px rgba(255,125,43,.78))}}
