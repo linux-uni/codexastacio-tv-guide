@@ -1,5 +1,5 @@
-const CACHE="cx-tv-v96";
-const CORE=["./","./index.html","./styles.css?v=96","./app.js?v=96","./manifest.json?v=96","./champions.js?v=96","./icons/icon-192.png","./icons/icon-512.png","./assets/tv-listing-sports-banner.jpg?v=96"];
+const CACHE="cx-tv-v97";
+const CORE=["./","./index.html","./styles.css?v=97","./app.js?v=97","./manifest.json?v=97","./champions.js?v=97","./icons/icon-192.png","./icons/icon-512.png","./assets/tv-listing-sports-banner.jpg?v=96","./assets/settings-control-center.webp?v=97"];
 self.addEventListener("install",event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)))});
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",event=>{
