@@ -284,6 +284,7 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .schedule-card .mma-fighter-photo+ .mma-fighter-photo{background:linear-gradient(150deg,rgba(255,145,56,.38),rgba(12,20,33,.7) 70%)}
 .schedule-card .mma-fighter-photo b{font-size:clamp(38px,8vw,76px);font-weight:950;color:rgba(255,255,255,.23);letter-spacing:-.08em}
 .schedule-card .mma-fighter-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 18%;opacity:.76;filter:saturate(.88);mix-blend-mode:screen}
+.schedule-card .boxing-fighter-photos .mma-fighter-photo img{object-position:center 15%;opacity:.88;mix-blend-mode:normal}
 .schedule-card .mma-poster .mma-event-poster{position:absolute;z-index:-2;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:.85}
 
 /* v85 daily sports carousel as responsive event cards */
@@ -306,6 +307,7 @@ html{overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipul
 .daily-card-visual .mma-fighter-photo{position:relative;min-width:0;overflow:hidden;display:grid;place-items:center;background:linear-gradient(150deg,rgba(255,55,79,.38),rgba(12,20,33,.7) 70%)}
 .daily-card-visual .mma-fighter-photo+ .mma-fighter-photo{background:linear-gradient(150deg,rgba(255,145,56,.38),rgba(12,20,33,.7) 70%)}
 .daily-card-visual .mma-fighter-photo img,.daily-card-visual .mma-event-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 20%;opacity:.78}
+.daily-card-visual .boxing-fighter-photos .mma-fighter-photo img{object-position:center 15%;opacity:.88;mix-blend-mode:normal}
 .daily-card-body{min-width:0;align-self:center;padding:22px 28px}
 .daily-card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .daily-event-status{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid rgba(115,158,205,.24);border-radius:999px;color:#b9cbe0;background:rgba(10,25,45,.75);font-size:10px;font-weight:900;letter-spacing:.06em}
