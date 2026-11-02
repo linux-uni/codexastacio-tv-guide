@@ -438,3 +438,16 @@ html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 /* v101 conversation icon in the WhatsApp launcher */
 .whatsapp-float svg{display:block;width:31px;height:31px;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .whatsapp-float svg circle{fill:currentColor;stroke:none}
+
+/* v102: refined mobile navigation icon system */
+.mobile-nav{border-color:rgba(100,170,255,.22);background:linear-gradient(145deg,rgba(4,17,39,.94),rgba(2,10,25,.96));box-shadow:0 16px 50px rgba(0,0,0,.48),0 0 30px rgba(20,96,218,.08)}
+.mobile-nav button{position:relative;gap:5px;color:#8da6c7;transition:color .2s ease,background .2s ease,transform .2s ease}
+.mobile-nav button .nav-icon{display:grid;place-items:center;width:29px;height:27px;font-size:0;color:currentColor;transition:transform .2s ease,color .2s ease,filter .2s ease}
+.mobile-nav button .nav-icon svg{display:block;width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.mobile-nav button.active{color:#f5f9ff;background:linear-gradient(145deg,rgba(14,107,239,.38),rgba(86,63,224,.28));box-shadow:inset 0 0 0 1px rgba(83,167,255,.34),inset 0 1px rgba(255,255,255,.08),0 5px 18px rgba(20,92,220,.14)}
+.mobile-nav button.active .nav-icon{color:#87dcff;filter:drop-shadow(0 0 7px rgba(55,179,255,.45));transform:translateY(-1px)}
+.mobile-nav button span{font-size:10px;font-weight:750;letter-spacing:-.01em}
+.mobile-nav button:active .nav-icon{transform:scale(.88)}
+.mobile-nav button:focus-visible{outline:2px solid rgba(86,195,255,.78);outline-offset:1px}
+@media(max-width:760px){.mobile-nav button{padding:3px 0}.mobile-nav button .nav-icon{width:27px;height:25px}.mobile-nav button .nav-icon svg{width:22px;height:22px}.mobile-nav button span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.mobile-nav button,.mobile-nav button .nav-icon{transition:none}}

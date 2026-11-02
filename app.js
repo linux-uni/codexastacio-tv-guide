@@ -796,9 +796,21 @@ function content(){
  return heroSlider()+finder+chips()+providerSection+channelSection
 }
 
+function navIcon(view){
+ const paths={
+  home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  schedule:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  channels:'<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M9 3.5v17M15 3.5v17M3.5 9h17M3.5 15h17"/>',
+  leagues:'<path d="M7 4h10v4a5 5 0 0 1-10 0zM7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4M12 13v5M8 21h8M10 18h4"/>',
+  favorites:'<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',
+  install:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
+  account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>'
+ };
+ return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(paths[view]||'')+'</svg>';
+}
 function mobileNav(){
- const items=[["home","⌂","Inicio"],["schedule","◷","Agenda"],["channels","▦","Canales"],["leagues","◆","Ligas"],["favorites","★","Favoritos"],["install","↓","Instalar"],["account","◎","Cuenta"]].filter(([v])=>v==="home"||v==="account"||v==="install"||canView(v));
- return '<nav class="mobile-nav" aria-label="Navegación móvil">'+items.map(x=>'<button data-view="'+x[0]+'" class="'+(state.view===x[0]?"active":"")+'"><i>'+x[1]+'</i><span>'+x[2]+'</span></button>').join("")+'</nav>'
+ const items=[["home","Inicio"],["schedule","Agenda"],["channels","Canales"],["leagues","Ligas"],["favorites","Favoritos"],["install","Instalar"],["account","Cuenta"]].filter(([v])=>v==="home"||v==="account"||v==="install"||canView(v));
+ return '<nav class="mobile-nav" aria-label="Navegación móvil">'+items.map(x=>'<button data-view="'+x[0]+'" class="'+(state.view===x[0]?"active":"")+'" aria-label="'+x[1]+'"><i class="nav-icon">'+navIcon(x[0])+'</i><span>'+x[1]+'</span></button>').join("")+'</nav>'
 }
 
 function dashboard(){
