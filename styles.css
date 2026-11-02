@@ -434,3 +434,7 @@ html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 .head-slogan .language-toggle:hover,.head-slogan .language-toggle:focus-visible{transform:scale(1.12);filter:drop-shadow(0 0 11px rgba(35,220,255,.8));outline:none}
 @media(max-width:760px){.top #account{font-size:initial;width:52px;height:52px;padding:0;border-radius:50%}.top #account:after{content:none}}
 @media(prefers-reduced-motion:reduce){.account-menu-trigger,.head-slogan .language-toggle{transition:none}.head-slogan .language-toggle svg{-webkit-animation-duration:7s;animation-duration:7s}}
+
+/* v101 conversation icon in the WhatsApp launcher */
+.whatsapp-float svg{display:block;width:31px;height:31px;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.whatsapp-float svg circle{fill:currentColor;stroke:none}
