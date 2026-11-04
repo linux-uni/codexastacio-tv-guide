@@ -453,6 +453,7 @@ function setupFavoriteInteractions(){
 function scheduleControls(){return `<div class="chips schedule-tabs">${[["today","Hoy"],["tomorrow","Mañana"],["week","Próximos 7 días"],["month","Próximos 30 días"]].map(x=>`<button data-range="${x[0]}" class="chip ${scheduleRange===x[0]?"active":""}">${x[1]}</button>`).join("")}</div>`}
 function sportMatches(e,s){if(s==="Todos")return true;if(s==="Champions League")return isChampionsLeague(e);const x=String([e.strLeague,e.strSport,e.strEvent].join(" ")).toLowerCase();if(s==="NFL")return /\bnfl\b|national football league/.test(x);if(s==="NBA")return /\bnba\b|national basketball association/.test(x)&&!/ncaa|college/.test(x);if(s==="MLB")return /\bmlb\b|major league baseball/.test(x);if(s==="NHL")return /\bnhl\b|national hockey league/.test(x);if(s===COMBAT_CATEGORY||s==="Boxeo"||s==="UFC/MMA")return /boxing|boxeo|\bufc\b|\bmma\b|mixed martial/.test(x);if(s==="Fútbol")return /soccer|fútbol|football/.test(x)&&!/american football|college football|national football league/.test(x);if(s==="Tenis")return /tennis|tenis|\batp\b|\bwta\b/.test(x);if(s==="NCAA")return /ncaa|college|division 1/.test(x);if(s==="Fórmula 1")return /formula 1|formula one|\bf1\b/.test(x);return x.includes(s.toLowerCase())}
 const ESPN_SPORT_FEEDS={
+ MLB:{paths:["baseball/mlb"],sport:"Baseball",league:"MLB"},
  NFL:{paths:["football/nfl"],sport:"American Football",league:"NFL"},
  NBA:{paths:["basketball/nba"],sport:"Basketball",league:"NBA"},
  UFC:{paths:["mma/ufc"],sport:"MMA",league:"UFC"},
@@ -492,7 +493,7 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
   strHomeTeam:homeName,strAwayTeam:awayName,
   strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||(feedKey==="UFC"&&home?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+home.id+".png":""),
   strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||(feedKey==="UFC"&&away?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+away.id+".png":""),
-  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="SOCCER"?"Soccer":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":"Basketball",
+  strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="SOCCER"?"Soccer":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":feedKey==="MLB"?"Baseball":"Basketball",
   strTimestamp:valid?d.toISOString():"",dateEvent:valid?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d):"",
   strTime:valid?d.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
   strStatus:type.state==="in"?"LIVE":type.completed?"FINAL":type.detail||type.name||"",
@@ -520,7 +521,35 @@ async function espnGames(offsets,feedKey){
  }));
  return [...new Map(results.flat().map(e=>[e.idEvent,e])).values()];
 }
-async function mlbGames(offsets){const url="https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate="+dateKey(offsets[0])+"&endDate="+dateKey(offsets[offsets.length-1]);const res=await fetch(url);if(!res.ok)throw Error("MLB feed HTTP "+res.status);const data=await res.json();return (data.dates||[]).flatMap(d=>(d.games||[]).map(g=>{const h=g.teams?.home?.team,a=g.teams?.away?.team;return {idEvent:"mlb-"+g.gamePk,strEvent:(a?.name||"Visitante")+" vs "+(h?.name||"Local"),strHomeTeam:h?.name||"",strAwayTeam:a?.name||"",strHomeTeamBadge:h?.id?"https://www.mlbstatic.com/team-logos/"+h.id+".svg":"",strAwayTeamBadge:a?.id?"https://www.mlbstatic.com/team-logos/"+a.id+".svg":"",strLeague:"MLB",strSport:"Baseball",strTimestamp:g.gameDate,dateEvent:g.officialDate||d.date,strTime:g.gameDate?new Date(g.gameDate).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"",strStatus:g.status?.abstractGameState==="Live"?"LIVE":g.status?.detailedState||"",intHomeScore:g.teams?.home?.score,intAwayScore:g.teams?.away?.score}}))}
+let mlbFeedFailed=false;
+async function mlbGames(offsets){
+ const start=dateKey(Math.min(...offsets)),end=dateKey(Math.max(...offsets));
+ const url="https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate="+start+"&endDate="+end;
+ try{
+  const res=await fetch(url,{signal:AbortSignal.timeout(12000)});
+  if(!res.ok)throw Error("MLB HTTP "+res.status);
+  const data=await res.json();
+  if(!Array.isArray(data.dates))throw Error("Respuesta MLB inválida");
+  mlbFeedFailed=false;
+  return data.dates.flatMap(d=>(d.games||[]).map(g=>{
+   const h=g.teams?.home?.team,a=g.teams?.away?.team;
+   return {idEvent:"mlb-"+g.gamePk,strEvent:(a?.name||"Visitante")+" vs "+(h?.name||"Local"),
+    strHomeTeam:h?.name||"",strAwayTeam:a?.name||"",
+    strHomeTeamBadge:h?.id?"https://www.mlbstatic.com/team-logos/"+h.id+".svg":"",
+    strAwayTeamBadge:a?.id?"https://www.mlbstatic.com/team-logos/"+a.id+".svg":"",
+    strLeague:"MLB",strSport:"Baseball",strTimestamp:g.gameDate,
+    dateEvent:g.gameDate?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(new Date(g.gameDate)):g.officialDate||d.date,
+    strTime:g.gameDate?new Date(g.gameDate).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
+    strStatus:g.status?.abstractGameState==="Live"?"LIVE":g.status?.detailedState||"",
+    intHomeScore:g.teams?.home?.score,intAwayScore:g.teams?.away?.score};
+  }));
+ }catch(error){
+  console.warn("MLB Stats API:",error);
+  const fallback=await espnGames(offsets,"MLB");
+  mlbFeedFailed=!fallback.length;
+  return fallback;
+ }
+}
 const FOOTBALL_COMPETITIONS=["Premier League","La Liga","Serie A","Bundesliga","Ligue 1","Champions League","Europa League","Conference League","Copa Libertadores","Copa Sudamericana","FIFA World Cup","FIFA Club World Cup","Copa América","Euro","CONCACAF Champions Cup","CONCACAF Gold Cup","Liga MX","MLS","Brasileirão","Copa del Rey","FA Cup","EFL Cup","Coppa Italia","DFB-Pokal","Coupe de France","Saudi Pro League","Eredivisie","Primeira Liga","Scottish Premiership","Argentine Primera División"];
 let footballLeague="Todas";
 function footballCompetition(e){return String(e.strLeague||"Liga sin identificar")}
@@ -669,7 +698,7 @@ function downloadReminderCalendar(record){
 function scheduleCards(){
  const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
  const rows=scheduleEvents.filter(scheduleMatchesFilters);
- if(!rows.length)return intro+controls+'<div class="notice">'+(scheduleFilters.favoritesOnly&&!favoriteTeams().length?'Agrega equipos favoritos desde los botones ☆ de cada partido. ':state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':'No hay partidos que coincidan con estos filtros. ')+(scheduleFilters.favoritesOnly?'Desactiva “Solo favoritos” o sigue equipos desde sus partidos.':'Prueba otro período o cambia los filtros.')+'</div>';
+ if(!rows.length)return intro+controls+'<div class="notice">'+(scheduleFilters.favoritesOnly&&!favoriteTeams().length?'Agrega equipos favoritos desde los botones ☆ de cada partido. ':state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':state.sport==="MLB"&&mlbFeedFailed?'No se pudo consultar el calendario MLB. Reintenta o consulta MLB.com. ':state.sport==="MLB"?'No hay partidos MLB programados en este período. Fuera de temporada es normal que no haya encuentros. ':'No hay partidos que coincidan con estos filtros. ')+(scheduleFilters.favoritesOnly?'Desactiva “Solo favoritos” o sigue equipos desde sus partidos.':'Prueba otro período o cambia los filtros.')+'</div>';
  return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
 }
 
@@ -717,7 +746,7 @@ async function loadSchedule(silent=false){
  const includeMlb=allSports||selected==="MLB";
  const includeNhl=allSports||selected==="NHL";
  const includeBoxing=allSports||selected===COMBAT_CATEGORY||selected==="Boxeo"||selected==="UFC/MMA";
- const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"):
+ const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"&&key!=="MLB"):
   selected==="NFL"?["NFL"]:selected==="NBA"?["NBA"]:(selected===COMBAT_CATEGORY||selected==="UFC/MMA")?["UFC"]:
   selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:selected==="Fútbol"?["SOCCER"]:[];
  try{
@@ -1058,7 +1087,7 @@ async function loadSportsSlider(force=false){
  if(sliderLoading||(!force&&sliderLoadedDay===today&&Date.now()-sliderLastRefresh<300000))return;
  sliderLoading=true;
  try{
-  const keys=Object.keys(ESPN_SPORT_FEEDS).filter(k=>k!=="NHL");
+  const keys=Object.keys(ESPN_SPORT_FEEDS).filter(k=>k!=="NHL"&&k!=="MLB");
   const [general,mlb,nhl,ucl,espn]=await Promise.all([
    fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+today,{signal:AbortSignal.timeout(12000)}).then(r=>r.ok?r.json():null).then(x=>x?.events||[]).catch(e=>{console.warn("Sports day feed",e);return []}),
    mlbGames([0]).catch(e=>{console.warn("MLB day feed",e);return []}),
