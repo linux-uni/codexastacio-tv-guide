@@ -451,11 +451,28 @@ async function toggleTransmissionAlerts(){
  showReminderToast(next?"Te avisaremos cuando una transmisión se confirme para tus equipos.":"Avisos de transmisión desactivados.");
  renderScheduleDynamic();
 }
+function confirmFavoriteRemoval(name){
+ return new Promise(resolve=>{
+  const existing=document.getElementById("favoriteConfirmOverlay");
+  if(existing)existing.remove();
+  const overlay=document.createElement("div");
+  overlay.id="favoriteConfirmOverlay";
+  overlay.className="favorite-confirm-overlay";
+  overlay.innerHTML='<div class="favorite-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="favoriteConfirmTitle" aria-describedby="favoriteConfirmMessage"><div class="favorite-confirm-heading"><h2 id="favoriteConfirmTitle">⭐ Mis Favoritos</h2><button type="button" class="favorite-confirm-close" data-fav-answer="cancel" aria-label="Cerrar">×</button></div><p id="favoriteConfirmMessage">¿Quieres eliminar a <strong>'+esc(name)+'</strong> de Mis Favoritos?</p><div class="favorite-confirm-actions"><button type="button" class="favorite-confirm-cancel" data-fav-answer="cancel">Cancelar</button><button type="button" class="favorite-confirm-delete" data-fav-answer="remove">Eliminar</button></div></div>';
+  const previousFocus=document.activeElement;
+  const finish=value=>{document.removeEventListener("keydown",onKey);overlay.remove();if(previousFocus?.isConnected)previousFocus.focus();resolve(value)};
+  const onKey=e=>{if(e.key==="Escape"){e.preventDefault();finish(false)}else if(e.key==="Tab"){const buttons=[...overlay.querySelectorAll("button")];const first=buttons[0],last=buttons[buttons.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
+  overlay.addEventListener("click",e=>{const answer=e.target.closest("[data-fav-answer]");if(answer)finish(answer.dataset.favAnswer==="remove");else if(e.target===overlay)finish(false)});
+  document.body.appendChild(overlay);
+  document.addEventListener("keydown",onKey);
+  overlay.querySelector(".favorite-confirm-cancel").focus();
+ });
+}
 function setupFavoriteInteractions(){
  if(favoriteInteractionsBound)return;favoriteInteractionsBound=true;
- document.addEventListener("click",event=>{
+ document.addEventListener("click",async event=>{
   const fav=event.target.closest("[data-favorite-team]");
-  if(fav){event.preventDefault();const name=fav.dataset.favoriteTeam; if(isTeamFavorite(name)&&!window.confirm("¿Quieres eliminar a "+name+" de Mis equipos favoritos?"))return;const added=toggleFavoriteTeam(name);showReminderToast(added?"Equipo agregado a Mis equipos.":"Equipo eliminado de Mis equipos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
+  if(fav){event.preventDefault();const name=fav.dataset.favoriteTeam;if(isTeamFavorite(name)&&!(await confirmFavoriteRemoval(name)))return;const added=toggleFavoriteTeam(name);showReminderToast(added?"Equipo agregado a Mis Favoritos.":"Equipo eliminado de Mis Favoritos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
   const openSchedule=event.target.closest("[data-open-schedule]");if(openSchedule){event.preventDefault();state.view="schedule";state.sport="Todos";scheduleRange="month";dashboard();return} const calendar=event.target.closest("[data-calendar-event]");
   if(calendar){const e=[...scheduleEvents,...sliderEvents].find(x=>transmissionEventKey(x)===calendar.dataset.calendarEvent);if(!e)return;const start=eventStartInstant(e);if(!start){showReminderToast("Este partido no tiene hora de inicio.");return}downloadReminderCalendar({id:transmissionEventKey(e),title:e.strEvent||"Partido deportivo",startAt:start.toISOString(),league:e.strLeague||e.strSport||"Deporte",platform:confirmedTransmission(e).join(", ")});}
  });
