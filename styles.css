@@ -451,3 +451,12 @@ html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 .mobile-nav button:focus-visible{outline:2px solid rgba(86,195,255,.78);outline-offset:1px}
 @media(max-width:760px){.mobile-nav button{padding:3px 0}.mobile-nav button .nav-icon{width:27px;height:25px}.mobile-nav button .nav-icon svg{width:22px;height:22px}.mobile-nav button span{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.mobile-nav button,.mobile-nav button .nav-icon{transition:none}}
+
+/* Favorite team identity tiles */
+.favorite-chip-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:12px;margin:18px 0}
+.favorite-remove-chip.favorite-logo-chip{position:relative;display:flex;align-items:center;justify-content:center;min-height:84px;min-width:0;padding:12px 8px;border-radius:18px;background:linear-gradient(145deg,#10274b,#1d1650);border:1px solid #6152b3;transition:transform .15s ease,border-color .15s ease}
+.favorite-logo-chip img{display:block;width:58px;height:58px;max-width:100%;object-fit:contain}
+.favorite-logo-chip .favorite-logo-remove{position:absolute;right:5px;top:2px;font-size:16px;line-height:1;color:#c7c0ee;background:#152544;border-radius:50%;width:19px;height:19px}
+.favorite-logo-chip .favorite-logo-fallback{font-size:11px;overflow-wrap:anywhere;text-align:center}
+.favorite-logo-chip:active{transform:scale(.96)}
+@media(max-width:420px){.favorite-chip-row{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:9px}.favorite-remove-chip.favorite-logo-chip{min-height:76px}.favorite-logo-chip img{width:52px;height:52px}}
