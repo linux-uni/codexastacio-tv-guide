@@ -617,7 +617,7 @@ async function nhlGames(offsets){
  const official=[...new Map(games.map(g=>{
   const h=g.homeTeam||{},a=g.awayTeam||{},state=String(g.gameState||"").toUpperCase(),live=["LIVE","CRIT"].includes(state),done=["OFF","FINAL"].includes(state);
   const name=t=>t.placeName?.default&&t.commonName?.default?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";
-  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.gameDate||String(g.startTimeUTC||"").slice(0,10),strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
+  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.startTimeUTC?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(new Date(g.startTimeUTC)):g.gameDate||"",strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
   return [g.id,ev]
  })).values()];
  let backup=[];
@@ -766,6 +766,23 @@ function scheduleWithDeadline(promise,fallback,label,ms=14000){
  const deadline=new Promise(resolve=>{timeoutId=setTimeout(()=>{console.warn("Schedule source timed out:",label);resolve(fallback)},ms)});
  return Promise.race([Promise.resolve(promise).catch(error=>{console.warn("Schedule source failed:",label,error);return fallback}),deadline]).finally(()=>clearTimeout(timeoutId));
 }
+async function fetchSportsDbDays(offsets){
+ const queue=offsets.map(dateKey),results=new Array(queue.length);
+ let cursor=0;
+ async function worker(){
+  while(cursor<queue.length){
+   const index=cursor++,day=queue[index];
+   try{
+    const response=await fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+day,{signal:AbortSignal.timeout(9000)});
+    if(!response.ok)throw Error("SportsDB HTTP "+response.status);
+    const data=await response.json();
+    results[index]=data&&Array.isArray(data.events)?data:null;
+   }catch(error){console.warn("SportsDB feed "+day,error);results[index]=null}
+  }
+ }
+ await Promise.all(Array.from({length:Math.min(4,queue.length)},()=>worker()));
+ return results;
+}
 async function loadSchedule(silent=false){
  const box=document.getElementById("scheduleDynamic")||(state.view==="favorites"?document.getElementById("favoriteScheduleDynamic"):null);
  if(!box)return;
@@ -785,7 +802,7 @@ async function loadSchedule(silent=false){
  try{
   const useSportsDb=!["Champions League","MLB","NHL"].includes(selected);
   const externalPromise=useSportsDb
-   ?Promise.all(offsets.map(n=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+dateKey(n),{signal:AbortSignal.timeout(9000)}).then(r=>r.ok?r.json():null).catch(()=>null)))
+   ?fetchSportsDbDays(offsets)
    :Promise.resolve([]);
   const startDate=new Date();startDate.setHours(0,0,0,0);
   startDate.setDate(startDate.getDate()+(range==="tomorrow"?1:0));
