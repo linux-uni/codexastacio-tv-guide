@@ -1,7 +1,4 @@
 "use strict";
-const {esc,safeDateTime,dateKey}=window.CXUtils;
-const {scheduleWithDeadline,fetchSportsDbDays}=window.CXSportsFeeds;
-const {sliderLocalDate,canViewProfile}=window.CXViewHelpers;
 const app=document.getElementById("app");
 const CFG={url:"https://dzlkpulknbpxibcvdhom.supabase.co",key:"sb_publishable_v4v_GxlTHZNqSYqO-Ij7bQ_IPPFU7sk",admin:"pecristoastacio@gmail.com"};
 const channels=[
@@ -222,8 +219,17 @@ function mmaPoster(e,compact=false){
 function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(/boxing|boxeo/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return boxingPoster(e,compact);if(/ufc|mma|mixed martial|ultimate fighting/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return mmaPoster(e,compact);if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
 function feedVisual(e){const combat=[e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ");if(/ufc|mma|mixed martial|ultimate fighting/i.test(combat))return mmaPoster(e,true);if(/boxing|boxeo/i.test(combat))return boxingPoster(e,true);return sportArtwork(e,"card")}
 
+const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
-function canView(view){return canViewProfile(currentProfile,view)}
+function canView(view){
+ if(currentProfile?.role==="admin")return true;
+ if(view==="schedule")return currentProfile?.can_view_schedule!==false;
+ if(view==="channels")return currentProfile?.can_view_channels!==false;
+ if(view==="leagues")return currentProfile?.can_view_leagues!==false;
+ if(view==="providers")return currentProfile?.can_view_providers!==false;
+ return true;
+}
+function safeDateTime(value){if(!value)return "Sin fecha";const d=new Date(value);return Number.isNaN(d.getTime())?"Sin fecha":d.toLocaleString()}
 
 async function loadManagedContent(){
  if(!sb||!currentUser)return;
@@ -311,6 +317,7 @@ function channelFilters(){return `<div class="channel-filterbar">${["Todos","Pr�
 function channelEvent(c){return sliderEvents.find(x=>c.sports.some(s=>{const a=String(x.strSport||"").toLowerCase(),b=s.toLowerCase();return a.includes(b==="fútbol"?"soccer":b==="nfl"?"american football":b==="nba"?"basketball":b==="mlb"?"baseball":b==="nhl"?"ice hockey":b==="tenis"?"tennis":b.split("/")[0])}))}
 function channelCards(list){let rows=list.map(c=>({c,e:channelEvent(c)}));if(channelFilter!=="Todos"&&channelFilter!=="Próximos")rows=rows.filter(({c})=>c.sports.includes(channelFilter));return `<div class="channel-showcase">${rows.map(({c,e},i)=>{const sport=e?.strSport||c.sports[0],img=e&&(e.strThumb||e.strPoster||e.strFanart);return `<article class="channel-tile searchable" data-search="${esc((c.name+" "+c.n+" "+c.sports.join(" ")+" "+(e?.strEvent||"")).toLowerCase())}" ${img?`style="--channel-bg:url('${esc(img)}')"`:""}><div class="channel-art"></div><div class="channel-body"><div class="channel-head"><div class="channel-identity"><span class="channel-logo">${esc(c.name)}</span><span class="channel-number">CH ${esc(c.n)}</span></div>${sportMark(sport)}</div><span class="next-badge">PRÓXIMO</span><h3>${esc(e?.strEvent||c.sports.slice(0,2).join(" • "))}</h3><div class="channel-meta">${esc(e?[e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "):"Programación deportiva")}</div><div class="progress-track"><i style="width:${25+(i%4)*15}%"></i></div><div class="now-next"><span><b>Ahora</b> Guía deportiva</span><span><b>A continuación</b> ${esc(e?.strEvent||"Por actualizar")}</span></div></div></article>`}).join("")}</div>`}
 function eventCards(list){return `<div class="grid">${list.map(e=>`<article class="card event searchable" data-search="${esc((e.sport+" "+e.title+" "+e.network+" "+e.channel).toLowerCase())}"><div class="row"><strong>${esc(e.sport)}</strong><span class="badge">${esc(e.status)}</span></div><h3>${esc(e.title)}</h3><div class="small muted">📺 ${esc(e.network)}</div><div class="notice small">DISH: ${esc(e.channel)} • horarios por TV listing</div></article>`).join("")}</div>`}
+function dateKey(offset=0){const d=new Date();d.setDate(d.getDate()+offset);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 const FAVORITES_STORAGE_PREFIX="cx-tv-favorites-v1:";
 const TRANSMISSION_ALERTS_PREFIX="cx-tv-transmission-alerts-v1:";
 const TRANSMISSION_STATE_PREFIX="cx-tv-transmission-state-v1:";
@@ -444,28 +451,11 @@ async function toggleTransmissionAlerts(){
  showReminderToast(next?"Te avisaremos cuando una transmisión se confirme para tus equipos.":"Avisos de transmisión desactivados.");
  renderScheduleDynamic();
 }
-function confirmFavoriteRemoval(name){
- return new Promise(resolve=>{
-  const existing=document.getElementById("favoriteConfirmOverlay");
-  if(existing)existing.remove();
-  const overlay=document.createElement("div");
-  overlay.id="favoriteConfirmOverlay";
-  overlay.className="favorite-confirm-overlay";
-  overlay.innerHTML='<div class="favorite-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="favoriteConfirmTitle" aria-describedby="favoriteConfirmMessage"><div class="favorite-confirm-heading"><h2 id="favoriteConfirmTitle">⭐ Mis Favoritos</h2><button type="button" class="favorite-confirm-close" data-fav-answer="cancel" aria-label="Cerrar">×</button></div><p id="favoriteConfirmMessage">¿Quieres eliminar a <strong>'+esc(name)+'</strong> de Mis Favoritos?</p><div class="favorite-confirm-actions"><button type="button" class="favorite-confirm-cancel" data-fav-answer="cancel">Cancelar</button><button type="button" class="favorite-confirm-delete" data-fav-answer="remove">Eliminar</button></div></div>';
-  const previousFocus=document.activeElement;
-  const finish=value=>{document.removeEventListener("keydown",onKey);overlay.remove();if(previousFocus?.isConnected)previousFocus.focus();resolve(value)};
-  const onKey=e=>{if(e.key==="Escape"){e.preventDefault();finish(false)}else if(e.key==="Tab"){const buttons=[...overlay.querySelectorAll("button")];const first=buttons[0],last=buttons[buttons.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}};
-  overlay.addEventListener("click",e=>{const answer=e.target.closest("[data-fav-answer]");if(answer)finish(answer.dataset.favAnswer==="remove");else if(e.target===overlay)finish(false)});
-  document.body.appendChild(overlay);
-  document.addEventListener("keydown",onKey);
-  overlay.querySelector(".favorite-confirm-cancel").focus();
- });
-}
 function setupFavoriteInteractions(){
  if(favoriteInteractionsBound)return;favoriteInteractionsBound=true;
- document.addEventListener("click",async event=>{
+ document.addEventListener("click",event=>{
   const fav=event.target.closest("[data-favorite-team]");
-  if(fav){event.preventDefault();const name=fav.dataset.favoriteTeam;if(isTeamFavorite(name)&&!(await confirmFavoriteRemoval(name)))return;const added=toggleFavoriteTeam(name);showReminderToast(added?"Equipo agregado a Mis Favoritos.":"Equipo eliminado de Mis Favoritos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
+  if(fav){event.preventDefault();const name=fav.dataset.favoriteTeam; if(isTeamFavorite(name)&&!window.confirm("¿Quieres eliminar a "+name+" de Mis equipos favoritos?"))return;const added=toggleFavoriteTeam(name);showReminderToast(added?"Equipo agregado a Mis equipos.":"Equipo eliminado de Mis equipos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
   const openSchedule=event.target.closest("[data-open-schedule]");if(openSchedule){event.preventDefault();state.view="schedule";state.sport="Todos";scheduleRange="month";dashboard();return} const calendar=event.target.closest("[data-calendar-event]");
   if(calendar){const e=[...scheduleEvents,...sliderEvents].find(x=>transmissionEventKey(x)===calendar.dataset.calendarEvent);if(!e)return;const start=eventStartInstant(e);if(!start){showReminderToast("Este partido no tiene hora de inicio.");return}downloadReminderCalendar({id:transmissionEventKey(e),title:e.strEvent||"Partido deportivo",startAt:start.toISOString(),league:e.strLeague||e.strSport||"Deporte",platform:confirmedTransmission(e).join(", ")});}
  });
@@ -610,7 +600,7 @@ async function nhlGames(offsets){
  const official=[...new Map(games.map(g=>{
   const h=g.homeTeam||{},a=g.awayTeam||{},state=String(g.gameState||"").toUpperCase(),live=["LIVE","CRIT"].includes(state),done=["OFF","FINAL"].includes(state);
   const name=t=>t.placeName?.default&&t.commonName?.default?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";
-  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.startTimeUTC?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(new Date(g.startTimeUTC)):g.gameDate||"",strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
+  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.gameDate||String(g.startTimeUTC||"").slice(0,10),strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
   return [g.id,ev]
  })).values()];
  let backup=[];
@@ -773,19 +763,19 @@ async function loadSchedule(silent=false){
  try{
   const useSportsDb=!["Champions League","MLB","NHL"].includes(selected);
   const externalPromise=useSportsDb
-   ?fetchSportsDbDays(offsets)
+   ?Promise.all(offsets.map(n=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+dateKey(n)).then(r=>r.ok?r.json():null).catch(()=>null)))
    :Promise.resolve([]);
   const startDate=new Date();startDate.setHours(0,0,0,0);
   startDate.setDate(startDate.getDate()+(range==="tomorrow"?1:0));
   const endDate=new Date(startDate);endDate.setDate(endDate.getDate()+(range==="month"?30:range==="week"?7:1));
   const dbPromise=sb.from("events").select("id,provider_id,channel_id,title,sport,starts_at,region,rights_scope,verified,status").gte("starts_at",startDate.toISOString()).lt("starts_at",endDate.toISOString()).order("starts_at");
   const [rs,db,mlb,nhl,ucl,espn]=await Promise.all([
-   scheduleWithDeadline(externalPromise,[],"SportsDB"),
-   scheduleWithDeadline(dbPromise,{data:[]},"Managed events"),
-   includeMlb?scheduleWithDeadline(mlbGames(offsets),[],"MLB"):Promise.resolve([]),
-   includeNhl?scheduleWithDeadline(nhlGames(offsets),[],"NHL"):Promise.resolve([]),
-   includeUcl?scheduleWithDeadline(championsGames(offsets),[],"Champions League"):Promise.resolve([]),
-   scheduleWithDeadline(Promise.all(espnKeys.map(key=>scheduleWithDeadline(espnGames(offsets,key),[],key))).then(groups=>groups.flat()),[],"ESPN")
+   externalPromise,
+   dbPromise,
+   includeMlb?mlbGames(offsets).catch(e=>{console.warn("MLB feed",e);return []}):Promise.resolve([]),
+   includeNhl?nhlGames(offsets).catch(e=>{console.warn("NHL feed",e);return []}):Promise.resolve([]),
+   includeUcl?championsGames(offsets):Promise.resolve([]),
+   Promise.all(espnKeys.map(key=>espnGames(offsets,key))).then(groups=>groups.flat())
   ]);
   if(requestId!==scheduleRequestId||(state.view!=="schedule"&&state.view!=="favorites")||(state.view==="schedule"&&(state.sport!==selected||scheduleRange!==range)))return;
   const managed=(db.data||[]).map(x=>{
@@ -821,8 +811,6 @@ async function loadSchedule(silent=false){
     if(next)next.onchange=fl.onchange;
    };
   }
-  const favoriteTarget=document.getElementById("favoriteScheduleDynamic");
-  if(favoriteTarget)favoriteTarget.innerHTML=scheduleCards();
   if(updated)updated.textContent="Actualizado "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
  }catch(e){
   if(requestId!==scheduleRequestId)return;
@@ -832,18 +820,6 @@ async function loadSchedule(silent=false){
 }
 
 function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
-function homeTodayPreview(){
- const items=[...sliderEvents,...scheduleEvents].filter(e=>e&&e.strEvent&&sliderLocalDate(e)===dateKey(0)).slice(0,3);
- return '<section class="home-today"><div class="home-section-heading"><h2>Partidos de hoy</h2><button type="button" class="home-text-link" data-view="schedule">Ver agenda ›</button></div><div class="home-today-grid" id="homeTodayGrid" aria-live="polite">'+(items.length?items.map(e=>'<article class="home-game-card"><span class="home-game-league">'+esc(e.strLeague||e.strSport||"Deportes")+'</span><strong>'+esc(e.strEvent)+'</strong><span class="muted small">'+esc(e.strTime||"Horario por confirmar")+'</span></article>').join(""):'<div class="home-empty-games">'+(sliderLoadedDay===dateKey(0)?'No hay partidos disponibles para hoy en las fuentes consultadas. Abre Agenda para revisar más fechas.':'Consultando partidos de hoy…')+'</div>')+'</div></section>';
-}
-function refreshHomeToday(){
- const target=document.getElementById("homeTodayGrid");
- if(!target)return;
- const wrapper=document.createElement("div");
- wrapper.innerHTML=homeTodayPreview();
- const fresh=wrapper.querySelector("#homeTodayGrid");
- if(fresh)target.replaceWith(fresh);
-}
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
  const filteredEvents=state.sport==="Todos"?events:events.filter(e=>e.sport===state.sport);
@@ -855,9 +831,9 @@ function content(){
  if(state.view==="leagues")return '<h2>Ligas y deportes</h2><p class="muted">Accesos rápidos a la programación.</p><div class="section-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div>'+chips()+eventCards(filteredEvents);
  if(state.view==="favorites")return '<div class="section-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div><div id="favoriteHome">'+favoriteHomeSection()+'</div><div id="favoriteScheduleDynamic" class="notice">Cargando partidos de tus equipos…</div>';
  const finder=currentProfile?.can_search===false?'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">La búsqueda está restringida para esta cuenta.</p></div></div>':'<div class="finder"><div><h2>Encuentra <span>tus deportes</span></h2><p class="muted">Busca canales, deportes y plataformas</p></div><div class="finder-search"><input id="search" type="search" class="input" placeholder="Busca equipo, deporte, liga, canal o plataforma…"></div></div>';
- const providerSection=canView("providers")?'<section class="home-providers"><h2>Plataformas digitales</h2>'+providerCards()+'</section>':"";
+ const providerSection=canView("providers")?'<h2>Plataformas digitales</h2>'+providerCards():"";
  const channelSection=canView("channels")?'<div class="section-title"><h2>Canales destacados</h2><span class="small muted">Ahora y próximos deportes</span></div>'+channelFilters()+channelCards(filteredChannels):"";
- return '<div class="home-dashboard">'+homeTodayPreview()+heroSlider()+finder+chips()+providerSection+channelSection+'</div>'
+ return heroSlider()+finder+chips()+providerSection+channelSection
 }
 
 function navIcon(view){
@@ -881,7 +857,7 @@ function dashboard(){
  if(!currentUser){login();return}
  if(!canView(state.view))state.view="home";
  const accountLabel=currentProfile?.username||"Mi cuenta";
- app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><img class="slogan-banner-art" src="./assets/tv-listing-sports-banner.jpg?v=96" alt="" aria-hidden="true" decoding="async"><div class="slogan-marquee"><div class="slogan-track"><div class="slogan-copy"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="slogan-copy" aria-hidden="true"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="slogan-copy" aria-hidden="true"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div></div></div>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary account-menu-trigger" aria-label="Abrir menú de cuenta" title="Menú de cuenta" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Menú de cuenta</span></button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Ajustes</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v110 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="Iniciar conversación por WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.3 11.6a8.3 8.3 0 0 1-12.2 7.3L3 20l1.2-4.8a8.3 8.3 0 1 1 16.1-3.6Z"/><circle cx="8.6" cy="11.8" r=".85"/><circle cx="12" cy="11.8" r=".85"/><circle cx="15.4" cy="11.8" r=".85"/></svg><span>Hola, necesito más información!</span></a></main>';
+ app.innerHTML='<main class="wrap"><header class="top app-head"><div class="cx-logo"><span class="cx-symbol">CX</span><span class="cx-word"><span>Code<b>X</b>aStacio</span><small>TV GUIDE</small></span></div><div class="head-slogan" aria-label="Todo el deporte. Una sola guía."><img class="slogan-banner-art" src="./assets/tv-listing-sports-banner.jpg?v=96" alt="" aria-hidden="true" decoding="async"><div class="slogan-marquee"><div class="slogan-track"><div class="slogan-copy"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="slogan-copy" aria-hidden="true"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div><div class="slogan-copy" aria-hidden="true"><strong>Todo el deporte.</strong><span>Una sola guía.</span></div></div></div>'+languageToggleButton()+'</div><div class="account-menu-wrap"><button id="account" class="btn primary account-menu-trigger" aria-label="Abrir menú de cuenta" title="Menú de cuenta" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Menú de cuenta</span></button><div id="accountMenu" class="account-menu hidden"><div class="account-menu-user"><strong>'+esc(accountLabel)+'</strong><small>'+esc(currentUser.email||"")+'</small></div><button id="menuProfile">⚙ Ajustes</button>'+(currentProfile?.role==="admin"?'<button id="menuAdmin">◆ Control Center</button>':"")+'<button id="menuLogout">↪ Cerrar sesión</button></div></div></header>'+nav()+'<section class="panel">'+content()+'</section>'+mobileNav()+'<footer class="footer">TV Listing App • CodeXaStacio • v84 • Sports</footer><a class="whatsapp-float" href="https://wa.me/18097777117?text=Hola%2C%20necesito%20mas%20informacion%21" target="_blank" rel="noopener" aria-label="Iniciar conversación por WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.3 11.6a8.3 8.3 0 0 1-12.2 7.3L3 20l1.2-4.8a8.3 8.3 0 1 1 16.1-3.6Z"/><circle cx="8.6" cy="11.8" r=".85"/><circle cx="12" cy="11.8" r=".85"/><circle cx="15.4" cy="11.8" r=".85"/></svg><span>Hola, necesito más información!</span></a></main>';
  bind();
 }
 
@@ -1106,6 +1082,11 @@ function showSlide(step=0){
  hero.className="hero-slide daily-card-stage "+(key?"feed-"+String(key).toLowerCase().replace(/[^a-z0-9]+/g,"-"):"");hero.style.backgroundImage="";
  hero.innerHTML='<article class="daily-event-card"><div class="daily-card-visual">'+visual+'</div><div class="daily-card-body"><div class="daily-card-top"><span class="badge">'+esc(key)+'</span><span class="daily-event-status '+(live?"is-live":"")+'">'+(live?'● ':"")+stateLabel+'</span></div><p class="daily-event-date">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" · ")||"Horario por confirmar")+'</p><h3>'+esc(e.strEvent||e.title||"Evento deportivo")+'</h3><p class="daily-event-league">'+esc(e.strLeague||e.strSport||"")+'</p>'+scoreBadge(e)+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener noreferrer">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div></article>';
 }
+function sliderLocalDate(e){
+ if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
+ const d=new Date(e.strTimestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
+ return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d);
+}
 function sliderEventKey(e){
  const clean=x=>String(x||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
  const league=leagueKey(e)||String(e.strLeague||e.strSport||"").toLowerCase();
@@ -1120,10 +1101,10 @@ async function loadSportsSlider(force=false){
   const keys=Object.keys(ESPN_SPORT_FEEDS).filter(k=>k!=="NHL"&&k!=="MLB");
   const [general,mlb,nhl,ucl,espn]=await Promise.all([
    fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+today,{signal:AbortSignal.timeout(12000)}).then(r=>r.ok?r.json():null).then(x=>x?.events||[]).catch(e=>{console.warn("Sports day feed",e);return []}),
-   scheduleWithDeadline(mlbGames([0]),[],"MLB home",14000),
-   scheduleWithDeadline(nhlGames([0]),[],"NHL home",14000),
-   scheduleWithDeadline(championsGames([0]),[],"UCL home",14000),
-   Promise.all(keys.map(k=>scheduleWithDeadline(espnGames([0],k),[],"ESPN "+k,14000))).then(rows=>rows.flat())
+   mlbGames([0]).catch(e=>{console.warn("MLB day feed",e);return []}),
+   nhlGames([0]).catch(e=>{console.warn("NHL day feed",e);return []}),
+   championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
+   Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
   const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
   const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today&&sliderEventActive(e));
@@ -1135,31 +1116,14 @@ async function loadSportsSlider(force=false){
    }).slice(0,48);
   shuffleDailyEvents();
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
-  showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();refreshHomeToday();checkTransmissionAnnouncements(sliderEvents);
+  showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
  }catch(e){console.warn("Sports day slider unavailable",e);showSlide()}
  finally{sliderLoading=false}
 }
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
-async function openSession(user){
- currentUser=null;currentProfile=null;
- try{
-  const {data:p,error}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);
-  if(error)throw error;
-  if(!p||p.status!=="active"){
-   await sb.auth.signOut().catch(e=>console.warn("Sign out:",e));
-   return login(p?.status==="blocked"?"Tu cuenta está restringida. Contacta al administrador.":"No se pudo verificar que tu cuenta esté activa. Contacta al administrador.");
-  }
-  currentUser=user;currentProfile=p;
- }catch(e){
-  console.warn("Profile verification:",e);
-  await sb.auth.signOut().catch(err=>console.warn("Sign out:",err));
-  return login("No se pudo verificar tu acceso. Comprueba tu conexión e inténtalo de nuevo.");
- }
- try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}
- dashboard();
-}
+async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
 
 function login(notice=""){
  app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
@@ -1183,7 +1147,6 @@ function accountPanel(){
 }
 
 function adminControlCenter(){
- if(!currentUser||currentProfile?.role!=="admin")return dashboard();
  app.innerHTML='<main class="wrap admin-shell"><header class="top admin-head"><div><div class="brand">CodeXaStacio Control Center</div><div class="small muted">Administración total de usuarios, contenido y permisos</div></div><button id="adminBack" class="btn">Volver a la guía</button></header><nav class="admin-main-tabs"><button data-admin-tab="users" class="active">Usuarios</button><button data-admin-tab="platforms">Plataformas</button><button data-admin-tab="channels">Canales</button><button data-admin-tab="schedule">Programación</button><button data-admin-tab="logs">Actividad</button></nav><section id="adminWorkspace" class="panel"><div class="notice">Cargando…</div></section><div id="adminModal"></div></main>';
  document.getElementById("adminBack").onclick=dashboard;
  document.querySelectorAll("[data-admin-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.remove("active"));b.classList.add("active");const tab=b.dataset.adminTab;if(tab==="users")adminUsersWorkspace();else if(tab==="platforms")adminPlatformsWorkspace();else if(tab==="channels")adminChannelsWorkspace();else if(tab==="schedule")adminScheduleWorkspace();else adminLogsWorkspace()});
@@ -1277,4 +1240,4 @@ function loadSupabase(){
 }
 observeInterfaceLanguage();
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=111",{updateViaCache:"none"}).catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=78").catch(e=>console.warn("SW:",e)))}
