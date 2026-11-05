@@ -843,8 +843,16 @@ async function loadSchedule(silent=false){
 
 function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
 function homeTodayPreview(){
- const items=[...sliderEvents,...scheduleEvents].filter(e=>e&&e.strEvent&&String(e.dateEvent||"")===dateKey(0)).slice(0,3);
- return '<section class="home-today"><div class="home-section-heading"><h2>Partidos de hoy</h2><button type="button" class="home-text-link" data-view="schedule">Ver agenda ›</button></div><div class="home-today-grid">'+(items.length?items.map(e=>'<article class="home-game-card"><span class="home-game-league">'+esc(e.strLeague||e.strSport||"Deportes")+'</span><strong>'+esc(e.strEvent)+'</strong><span class="muted small">'+esc(e.strTime||"Horario por confirmar")+'</span></article>').join(""):'<div class="home-empty-games">Consulta la agenda para ver los partidos disponibles y sus horarios confirmados.</div>')+'</div></section>';
+ const items=[...sliderEvents,...scheduleEvents].filter(e=>e&&e.strEvent&&sliderLocalDate(e)===dateKey(0)).slice(0,3);
+ return '<section class="home-today"><div class="home-section-heading"><h2>Partidos de hoy</h2><button type="button" class="home-text-link" data-view="schedule">Ver agenda ›</button></div><div class="home-today-grid" id="homeTodayGrid" aria-live="polite">'+(items.length?items.map(e=>'<article class="home-game-card"><span class="home-game-league">'+esc(e.strLeague||e.strSport||"Deportes")+'</span><strong>'+esc(e.strEvent)+'</strong><span class="muted small">'+esc(e.strTime||"Horario por confirmar")+'</span></article>').join(""):'<div class="home-empty-games">Consultando partidos de hoy…</div>')+'</div></section>';
+}
+function refreshHomeToday(){
+ const target=document.getElementById("homeTodayGrid");
+ if(!target)return;
+ const wrapper=document.createElement("div");
+ wrapper.innerHTML=homeTodayPreview();
+ const fresh=wrapper.querySelector("#homeTodayGrid");
+ if(fresh)target.replaceWith(fresh);
 }
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
@@ -1142,7 +1150,7 @@ async function loadSportsSlider(force=false){
    }).slice(0,48);
   shuffleDailyEvents();
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
-  showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
+  showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();refreshHomeToday();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
  }catch(e){console.warn("Sports day slider unavailable",e);showSlide()}
  finally{sliderLoading=false}
