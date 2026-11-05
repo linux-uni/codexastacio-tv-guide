@@ -16,6 +16,7 @@ jobs:
         run: |
           node --check core-utils.js
           node --check sports-feeds.js
+          node --check view-helpers.js
           node --check app.js
           node --check champions.js
           node --check sw.js
