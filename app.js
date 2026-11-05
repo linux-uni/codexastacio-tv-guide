@@ -1,6 +1,7 @@
 "use strict";
 const {esc,safeDateTime,dateKey}=window.CXUtils;
 const {scheduleWithDeadline,fetchSportsDbDays}=window.CXSportsFeeds;
+const {sliderLocalDate,canViewProfile}=window.CXViewHelpers;
 const app=document.getElementById("app");
 const CFG={url:"https://dzlkpulknbpxibcvdhom.supabase.co",key:"sb_publishable_v4v_GxlTHZNqSYqO-Ij7bQ_IPPFU7sk",admin:"pecristoastacio@gmail.com"};
 const channels=[
@@ -222,14 +223,7 @@ function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamL
 function feedVisual(e){const combat=[e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ");if(/ufc|mma|mixed martial|ultimate fighting/i.test(combat))return mmaPoster(e,true);if(/boxing|boxeo/i.test(combat))return boxingPoster(e,true);return sportArtwork(e,"card")}
 
 
-function canView(view){
- if(currentProfile?.role==="admin")return true;
- if(view==="schedule")return currentProfile?.can_view_schedule!==false;
- if(view==="channels")return currentProfile?.can_view_channels!==false;
- if(view==="leagues")return currentProfile?.can_view_leagues!==false;
- if(view==="providers")return currentProfile?.can_view_providers!==false;
- return true;
-}
+function canView(view){return canViewProfile(currentProfile,view)}
 
 async function loadManagedContent(){
  if(!sb||!currentUser)return;
@@ -1111,11 +1105,6 @@ function showSlide(step=0){
  const live=eventLive(e),stateLabel=live?"EN VIVO":eventFinished(e)?"FINALIZADO":"PRÓXIMO";
  hero.className="hero-slide daily-card-stage "+(key?"feed-"+String(key).toLowerCase().replace(/[^a-z0-9]+/g,"-"):"");hero.style.backgroundImage="";
  hero.innerHTML='<article class="daily-event-card"><div class="daily-card-visual">'+visual+'</div><div class="daily-card-body"><div class="daily-card-top"><span class="badge">'+esc(key)+'</span><span class="daily-event-status '+(live?"is-live":"")+'">'+(live?'● ':"")+stateLabel+'</span></div><p class="daily-event-date">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" · ")||"Horario por confirmar")+'</p><h3>'+esc(e.strEvent||e.title||"Evento deportivo")+'</h3><p class="daily-event-league">'+esc(e.strLeague||e.strSport||"")+'</p>'+scoreBadge(e)+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener noreferrer">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div></article>';
-}
-function sliderLocalDate(e){
- if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
- const d=new Date(e.strTimestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
- return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d);
 }
 function sliderEventKey(e){
  const clean=x=>String(x||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
