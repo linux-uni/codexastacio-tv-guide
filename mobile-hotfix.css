@@ -1,0 +1,24 @@
+/* v111 mobile post-launch hotfix. Loaded after responsive.css. */
+@media(max-width:760px){
+ .head-slogan{position:relative;isolation:isolate;overflow:hidden}
+ .head-slogan .slogan-marquee{min-width:0;overflow:hidden;mask-image:none;-webkit-mask-image:none}
+ /* A single readable headline is preferable to overlapping marquee copies on narrow screens. */
+ .head-slogan .slogan-track{width:100%;max-width:100%;transform:none!important;animation:none!important;justify-content:center}
+ .head-slogan .slogan-copy{display:none!important}
+ .head-slogan .slogan-copy:first-child{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 8px;padding:0 8px;white-space:normal;text-align:center}
+ .head-slogan .slogan-copy:first-child strong{font-size:clamp(15px,4vw,20px);line-height:1.2}
+ .head-slogan .slogan-copy:first-child span{font-size:clamp(10px,2.7vw,13px);line-height:1.2}
+ .mobile-nav{padding:4px 5px!important;bottom:calc(6px + env(safe-area-inset-bottom))!important}
+ .mobile-nav button{min-height:44px!important;gap:1px!important;padding:3px 0!important}
+ .mobile-nav button .nav-icon{width:24px!important;height:23px!important}
+ .mobile-nav button .nav-icon svg{width:21px!important;height:21px!important}
+ .mobile-nav button span{font-size:9px!important;line-height:1.15}
+ .whatsapp-float{bottom:calc(82px + env(safe-area-inset-bottom))!important;right:12px!important}
+ .home-dashboard,.home-today{min-width:0}
+ .home-today-grid{min-width:0}
+ .home-empty-games{min-height:0}
+}
+@media(max-width:420px){
+ .head-slogan .slogan-copy:first-child strong{font-size:15px}
+ .head-slogan .slogan-copy:first-child span{font-size:10px;letter-spacing:.03em}
+}
