@@ -387,11 +387,21 @@ function checkTransmissionAnnouncements(events,baselineOnly=false){
  const entries=Object.entries(stateMap);if(entries.length>500)for(const [key] of entries.slice(0,entries.length-500))delete stateMap[key];
  writeTransmissionState(stateMap);
 }
+const FAVORITE_NBA_CODES={"atlanta hawks":"atl","boston celtics":"bos","brooklyn nets":"bkn","charlotte hornets":"cha","chicago bulls":"chi","cleveland cavaliers":"cle","dallas mavericks":"dal","denver nuggets":"den","detroit pistons":"det","golden state warriors":"gs","houston rockets":"hou","indiana pacers":"ind","los angeles clippers":"lac","la clippers":"lac","los angeles lakers":"lal","memphis grizzlies":"mem","miami heat":"mia","milwaukee bucks":"mil","minnesota timberwolves":"min","new orleans pelicans":"no","new york knicks":"ny","oklahoma city thunder":"okc","orlando magic":"orl","philadelphia 76ers":"phi","phoenix suns":"phx","portland trail blazers":"por","sacramento kings":"sac","san antonio spurs":"sa","toronto raptors":"tor","utah jazz":"utah","washington wizards":"wsh"};
+function favoriteTeamLogo(name){
+ const key=String(name||"").trim().toLowerCase();
+ for(const e of [...scheduleEvents,...sliderEvents]){
+  if(String(e.strHomeTeam||"").toLowerCase()===key&&teamLogo(e,"home"))return teamLogo(e,"home");
+  if(String(e.strAwayTeam||"").toLowerCase()===key&&teamLogo(e,"away"))return teamLogo(e,"away");
+ }
+ const code=FAVORITE_NBA_CODES[key];
+ return code?"https://a.espncdn.com/i/teamlogos/nba/500/"+code+".png":"";
+}
 function favoriteHomeSection(){
  const teams=favoriteTeams(),unique=new Map();
  for(const e of [...scheduleEvents,...sliderEvents])if(isFavoriteMatch(e)){const key=transmissionEventKey(e);if(!unique.has(key))unique.set(key,e)}
  const matches=[...unique.values()].filter(e=>{const d=eventStartInstant(e);return !d||d.getTime()>Date.now()}).sort((x,y)=>String(x.strTimestamp||x.dateEvent||"").localeCompare(String(y.strTimestamp||y.dateEvent||""))).slice(0,4);
- const chips=teams.map(x=>'<button class="favorite-remove-chip" data-favorite-team="'+esc(x)+'" title="Dejar de seguir '+esc(x)+'">★ '+esc(x)+' ×</button>').join("");
+ const chips=teams.map(x=>{const logo=favoriteTeamLogo(x);return '<button class="favorite-remove-chip favorite-logo-chip" data-favorite-team="'+esc(x)+'" title="Dejar de seguir '+esc(x)+'" aria-label="Dejar de seguir '+esc(x)+'">'+(logo?'<img src="'+esc(logo)+'" alt="'+esc(x)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline\'">':'')+'<span class="favorite-logo-fallback"'+(logo?' style="display:none"':'')+'>'+esc(x)+'</span><span class="favorite-logo-remove" aria-hidden="true">×</span></button>'}).join("");
  const body=!teams.length?'<p class="muted">Sigue equipos desde sus partidos en Agenda y sus próximos juegos aparecerán aquí.</p>':matches.length?'<div class="favorite-match-list">'+matches.map(e=>'<article class="card favorite-match-card"><h3>'+esc(e.strEvent||"Partido")+'</h3><p class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</p>'+scoreBadge(e)+transmissionStateBadge(e)+watchBadges(e)+reminderActions(e)+shareEventActions(e)+'</article>').join("")+'</div>':'<p class="muted">Todavía no hay próximos partidos cargados de tus equipos. Abre Agenda para revisar más fechas.</p>';
  return '<section class="favorites-home"><div class="section-title"><div><h2>Mis equipos</h2><p class="small muted">Partidos y avisos de tus favoritos</p></div><button class="btn" data-open-schedule="true">Abrir Agenda</button></div>'+(teams.length?'<div class="favorite-chip-row">'+chips+'</div>':"")+body+'</section>';
 }
