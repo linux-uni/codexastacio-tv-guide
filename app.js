@@ -1,4 +1,5 @@
 "use strict";
+const {esc,safeDateTime,dateKey}=window.CXUtils;
 const app=document.getElementById("app");
 const CFG={url:"https://dzlkpulknbpxibcvdhom.supabase.co",key:"sb_publishable_v4v_GxlTHZNqSYqO-Ij7bQ_IPPFU7sk",admin:"pecristoastacio@gmail.com"};
 const channels=[
@@ -219,7 +220,6 @@ function mmaPoster(e,compact=false){
 function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(/boxing|boxeo/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return boxingPoster(e,compact);if(/ufc|mma|mixed martial|ultimate fighting/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return mmaPoster(e,compact);if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
 function feedVisual(e){const combat=[e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ");if(/ufc|mma|mixed martial|ultimate fighting/i.test(combat))return mmaPoster(e,true);if(/boxing|boxeo/i.test(combat))return boxingPoster(e,true);return sportArtwork(e,"card")}
 
-const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
 function canView(view){
  if(currentProfile?.role==="admin")return true;
@@ -229,7 +229,6 @@ function canView(view){
  if(view==="providers")return currentProfile?.can_view_providers!==false;
  return true;
 }
-function safeDateTime(value){if(!value)return "Sin fecha";const d=new Date(value);return Number.isNaN(d.getTime())?"Sin fecha":d.toLocaleString()}
 
 async function loadManagedContent(){
  if(!sb||!currentUser)return;
@@ -317,7 +316,6 @@ function channelFilters(){return `<div class="channel-filterbar">${["Todos","Pr�
 function channelEvent(c){return sliderEvents.find(x=>c.sports.some(s=>{const a=String(x.strSport||"").toLowerCase(),b=s.toLowerCase();return a.includes(b==="fútbol"?"soccer":b==="nfl"?"american football":b==="nba"?"basketball":b==="mlb"?"baseball":b==="nhl"?"ice hockey":b==="tenis"?"tennis":b.split("/")[0])}))}
 function channelCards(list){let rows=list.map(c=>({c,e:channelEvent(c)}));if(channelFilter!=="Todos"&&channelFilter!=="Próximos")rows=rows.filter(({c})=>c.sports.includes(channelFilter));return `<div class="channel-showcase">${rows.map(({c,e},i)=>{const sport=e?.strSport||c.sports[0],img=e&&(e.strThumb||e.strPoster||e.strFanart);return `<article class="channel-tile searchable" data-search="${esc((c.name+" "+c.n+" "+c.sports.join(" ")+" "+(e?.strEvent||"")).toLowerCase())}" ${img?`style="--channel-bg:url('${esc(img)}')"`:""}><div class="channel-art"></div><div class="channel-body"><div class="channel-head"><div class="channel-identity"><span class="channel-logo">${esc(c.name)}</span><span class="channel-number">CH ${esc(c.n)}</span></div>${sportMark(sport)}</div><span class="next-badge">PRÓXIMO</span><h3>${esc(e?.strEvent||c.sports.slice(0,2).join(" • "))}</h3><div class="channel-meta">${esc(e?[e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "):"Programación deportiva")}</div><div class="progress-track"><i style="width:${25+(i%4)*15}%"></i></div><div class="now-next"><span><b>Ahora</b> Guía deportiva</span><span><b>A continuación</b> ${esc(e?.strEvent||"Por actualizar")}</span></div></div></article>`}).join("")}</div>`}
 function eventCards(list){return `<div class="grid">${list.map(e=>`<article class="card event searchable" data-search="${esc((e.sport+" "+e.title+" "+e.network+" "+e.channel).toLowerCase())}"><div class="row"><strong>${esc(e.sport)}</strong><span class="badge">${esc(e.status)}</span></div><h3>${esc(e.title)}</h3><div class="small muted">📺 ${esc(e.network)}</div><div class="notice small">DISH: ${esc(e.channel)} • horarios por TV listing</div></article>`).join("")}</div>`}
-function dateKey(offset=0){const d=new Date();d.setDate(d.getDate()+offset);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
 const FAVORITES_STORAGE_PREFIX="cx-tv-favorites-v1:";
 const TRANSMISSION_ALERTS_PREFIX="cx-tv-transmission-alerts-v1:";
 const TRANSMISSION_STATE_PREFIX="cx-tv-transmission-state-v1:";
