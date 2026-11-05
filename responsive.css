@@ -1,0 +1,27 @@
+/* v111 responsive consolidation layer: intentionally loaded after legacy styles. */
+*,*::before,*::after{box-sizing:border-box}
+html{min-width:0;overflow-x:clip}
+body,#app,.wrap{min-width:0;max-width:100%}
+img,video,canvas,svg{max-width:100%}
+img,video{height:auto}
+button,input,select,textarea{font:inherit}
+button,a,input,select,textarea{touch-action:manipulation}
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid #78d5ff;outline-offset:3px}
+:where(.grid,.provider-grid,.home-today-grid,.home-dashboard,.panel,.schedule-card,.home-game-card)>*{min-width:0}
+:where(.schedule-card,.home-game-card,.home-empty-games,.panel){overflow-wrap:anywhere}
+@media(max-width:760px){
+ .wrap{width:100%;padding-inline:clamp(10px,3vw,18px)}
+ .home-today-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+ .home-section-heading{flex-wrap:wrap;align-items:baseline}
+ .home-dashboard>.chips{overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+ .favorite-confirm-dialog{max-height:calc(100dvh - 32px);overflow-y:auto}
+}
+@media(max-width:420px){
+ .home-today-grid{grid-template-columns:minmax(0,1fr)}
+ .favorite-confirm-actions{flex-wrap:wrap}
+ .favorite-confirm-actions button{min-width:min(100%,130px)}
+}
+@media(prefers-reduced-motion:reduce){
+ html:focus-within{scroll-behavior:auto}
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

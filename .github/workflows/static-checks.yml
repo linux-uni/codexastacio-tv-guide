@@ -1,0 +1,36 @@
+name: Static checks
+on:
+  push:
+    branches: [main, fix/home-schedule-loading-v111]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check core-utils.js
+          node --check sports-feeds.js
+          node --check view-helpers.js
+          node --check app.js
+          node --check champions.js
+          node --check sw.js
+      - name: Asset and PWA checks
+        run: node tests/static-checks.cjs
+      - name: Unit tests
+        run: node --test tests/unit.cjs
+
+  live-feeds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check live sports feeds
+        run: node tests/live-feeds.cjs
