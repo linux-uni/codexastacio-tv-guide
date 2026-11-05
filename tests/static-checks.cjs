@@ -6,6 +6,7 @@ const sw=fs.readFileSync('sw.js','utf8');
 const css=fs.readFileSync('styles.css','utf8');
 const responsive=fs.readFileSync('responsive.css','utf8');
 const mobileHotfix=fs.readFileSync('mobile-hotfix.css','utf8');
+const modernStyle=fs.readFileSync('v109-modern.css','utf8');
 const utils=fs.readFileSync('core-utils.js','utf8');
 const feeds=fs.readFileSync('sports-feeds.js','utf8');
 const version=html.match(/app\.js\?v=(\d+)/)?.[1];
@@ -58,4 +59,7 @@ assert.ok(html.includes('mobile-hotfix.css?v=1'),'Mobile hotfix stylesheet missi
 assert.ok(sw.includes('mobile-hotfix.css?v=1'),'Mobile hotfix not precached');
 assert.ok(mobileHotfix.includes('.slogan-track'),'Mobile banner fix missing');
 assert.ok(mobileHotfix.includes('.mobile-nav'),'Mobile navigation fix missing');
+assert.ok(html.includes('v109-modern.css?v=1'),'Modern v109 theme missing');
+assert.ok(sw.includes('v109-modern.css?v=1'),'Modern theme missing from offline cache');
+assert.ok(modernStyle.includes('.home-today'),'Modern home style missing');
 console.log('Static checks passed for version '+version);
