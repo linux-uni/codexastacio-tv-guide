@@ -22,6 +22,8 @@ jobs:
           node --check sw.js
       - name: Asset and PWA checks
         run: node tests/static-checks.cjs
+      - name: Unit tests
+        run: node --test tests/unit.cjs
 
   live-feeds:
     runs-on: ubuntu-latest
