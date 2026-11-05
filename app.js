@@ -1135,10 +1135,10 @@ async function loadSportsSlider(force=false){
   const keys=Object.keys(ESPN_SPORT_FEEDS).filter(k=>k!=="NHL"&&k!=="MLB");
   const [general,mlb,nhl,ucl,espn]=await Promise.all([
    fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+today,{signal:AbortSignal.timeout(12000)}).then(r=>r.ok?r.json():null).then(x=>x?.events||[]).catch(e=>{console.warn("Sports day feed",e);return []}),
-   mlbGames([0]).catch(e=>{console.warn("MLB day feed",e);return []}),
-   nhlGames([0]).catch(e=>{console.warn("NHL day feed",e);return []}),
-   championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
-   Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
+   scheduleWithDeadline(mlbGames([0]),[],"MLB home",14000),
+   scheduleWithDeadline(nhlGames([0]),[],"NHL home",14000),
+   scheduleWithDeadline(championsGames([0]),[],"UCL home",14000),
+   Promise.all(keys.map(k=>scheduleWithDeadline(espnGames([0],k),[],"ESPN "+k,14000))).then(rows=>rows.flat())
   ]);
   const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
   const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today&&sliderEventActive(e));
