@@ -5,6 +5,7 @@ const app=fs.readFileSync('app.js','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const css=fs.readFileSync('styles.css','utf8');
 const responsive=fs.readFileSync('responsive.css','utf8');
+const mobileHotfix=fs.readFileSync('mobile-hotfix.css','utf8');
 const utils=fs.readFileSync('core-utils.js','utf8');
 const feeds=fs.readFileSync('sports-feeds.js','utf8');
 const version=html.match(/app\.js\?v=(\d+)/)?.[1];
@@ -53,4 +54,8 @@ assert.ok(sw.includes('responsive.css?v='+version),'Responsive CSS missing from 
 assert.ok(responsive.includes('prefers-reduced-motion:reduce'),'Reduced-motion support missing');
 assert.ok(responsive.includes('focus-visible'),'Keyboard focus support missing');
 assert.ok(responsive.includes('max-width:420px'),'Small-screen layout missing');
+assert.ok(html.includes('mobile-hotfix.css?v=1'),'Mobile hotfix stylesheet missing');
+assert.ok(sw.includes('mobile-hotfix.css?v=1'),'Mobile hotfix not precached');
+assert.ok(mobileHotfix.includes('.slogan-track'),'Mobile banner fix missing');
+assert.ok(mobileHotfix.includes('.mobile-nav'),'Mobile navigation fix missing');
 console.log('Static checks passed for version '+version);
