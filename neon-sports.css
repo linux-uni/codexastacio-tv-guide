@@ -1,0 +1,68 @@
+/* Neon Sports Edition — responsive visual layer for v111.
+   Keep navigation, events, auth and live data functional. */
+:root{--bg:#020817;--panel:#06132b;--card:#071c39;--line:#18518b;--text:#f5f9ff;--muted:#a4b9d9;--blue:#06b7ff;--blue2:#2457ff;--cyan:#16d9ff}
+html{background:#020817}
+body{color:#f5f9ff;background:radial-gradient(ellipse 75% 22% at 50% 0%,rgba(0,105,255,.24),transparent 82%),radial-gradient(ellipse 70% 30% at 100% 30%,rgba(89,24,186,.09),transparent 75%),#020817;background-attachment:fixed}
+.wrap{max-width:1320px}
+.panel,.home-today,.schedule-card,.channel-tile{background:linear-gradient(150deg,rgba(8,28,62,.95),rgba(2,12,32,.97));border:1px solid rgba(38,123,234,.48);box-shadow:0 12px 36px rgba(0,0,0,.32),inset 0 1px rgba(105,182,255,.12)}
+.cx-logo{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
+.cx-logo .cx-symbol{background:linear-gradient(145deg,#00c7ff 0%,#2254ff 52%,#df22c5 100%)!important;border-radius:18px!important;box-shadow:0 6px 23px rgba(23,95,255,.38),0 0 0 1px rgba(117,196,255,.24)!important}
+.cx-logo .cx-word{min-width:0!important;line-height:1!important}
+.cx-logo .cx-word>span{font-weight:950!important;letter-spacing:-1.15px!important;white-space:nowrap!important;word-break:normal!important;overflow:visible!important}
+.cx-logo .cx-word>span b{color:#08ceff!important;text-shadow:0 0 14px rgba(0,200,255,.5)}
+.cx-logo .cx-word small{color:#28c9ff!important;font-weight:800!important;letter-spacing:.32em!important}
+.account-menu-trigger{border-radius:20px!important;border:1px solid rgba(67,155,255,.58)!important;background:linear-gradient(145deg,#0a78ec,#5b3ef1)!important;box-shadow:0 8px 28px rgba(25,85,240,.27)!important}
+.head-slogan{border:1px solid rgba(27,156,255,.62)!important;border-radius:25px!important;box-shadow:0 14px 42px rgba(0,38,112,.5),0 0 22px rgba(40,91,255,.25)!important;background:linear-gradient(120deg,#03132e,#092653 53%,#130d44)!important}
+.head-slogan .slogan-banner-art{opacity:.82!important;object-fit:cover!important}
+.head-slogan::before{background:linear-gradient(90deg,rgba(1,9,29,.35),rgba(1,12,35,.8) 25%,rgba(1,10,32,.89) 72%,rgba(1,8,30,.34))!important}
+.head-slogan .slogan-copy strong{font-weight:950!important;font-style:italic!important;text-shadow:0 2px 14px #001020,0 0 18px rgba(58,165,255,.6)!important}
+.head-slogan .slogan-copy span{color:#fff!important;font-weight:950!important;background:linear-gradient(105deg,#00b9ff,#2947ff 55%,#ce20ef);padding:5px 12px!important;border-radius:9px!important;box-shadow:0 0 18px rgba(43,75,255,.32)}
+.head-slogan .language-toggle{border:1px solid rgba(72,197,255,.6)!important;color:#21d7ff!important;background:rgba(1,14,39,.78)!important}
+.home-dashboard{gap:19px}
+.home-today{border-radius:25px!important;padding:clamp(15px,2.6vw,26px)!important;box-shadow:0 16px 48px rgba(0,0,0,.38),0 0 0 1px rgba(27,82,168,.12)!important}
+.home-section-heading{padding-bottom:14px;border-bottom:1px solid rgba(68,147,242,.24);margin-bottom:14px!important}
+.home-section-heading h2{font-weight:900!important;letter-spacing:-.035em!important}
+.home-section-heading h2::before{content:"▦";display:inline-block;margin-right:11px;color:#00cfff;text-shadow:0 0 14px rgba(0,185,255,.55)}
+.home-text-link{color:#00cfff!important;font-weight:800!important}
+.home-today-grid{gap:12px!important}
+.home-game-card{position:relative;isolation:isolate;overflow:hidden;border:1px solid rgba(31,139,255,.65)!important;border-radius:18px!important;background:radial-gradient(ellipse at 100% 10%,rgba(129,36,225,.22),transparent 50%),linear-gradient(110deg,#092a54 0%,#061733 56%,#0b1237 100%)!important;box-shadow:inset 3px 0 rgba(0,202,255,.8),0 9px 26px rgba(0,0,0,.25)!important;transition:transform .2s ease,border-color .2s ease!important}
+.home-game-card::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(6,185,255,.08),transparent 45%,rgba(179,30,241,.08));z-index:-1}
+.home-game-card:nth-child(3n+2){border-color:rgba(65,183,255,.68)!important;box-shadow:inset 3px 0 #00cfff,0 9px 26px rgba(0,0,0,.25)!important}
+.home-game-card:nth-child(3n){border-color:rgba(142,62,255,.65)!important;box-shadow:inset 3px 0 #a03cff,0 9px 26px rgba(0,0,0,.25)!important}
+.home-game-league{color:#73dcff!important;font-weight:850!important;letter-spacing:.015em!important}
+.home-game-card strong{color:#fff;font-weight:850!important;text-wrap:pretty}
+.home-game-card .muted{color:#b4d4f8!important}
+.home-empty-games{background:rgba(7,27,58,.8)!important;border-color:rgba(57,129,238,.42)!important}
+.home-dashboard>.chips .chip{border:1px solid rgba(53,136,247,.46)!important;background:linear-gradient(145deg,#0b2851,#07152e)!important;color:#e3efff!important;box-shadow:inset 0 1px rgba(255,255,255,.07)}
+.home-dashboard>.chips .chip.active{background:linear-gradient(135deg,#067bff,#5738e5)!important;color:white!important}
+.mobile-nav{background:linear-gradient(155deg,rgba(4,24,57,.97),rgba(3,9,30,.98))!important;border:1px solid rgba(18,140,255,.76)!important;box-shadow:0 0 24px rgba(17,83,255,.19),0 14px 45px rgba(0,0,0,.5)!important}
+.mobile-nav button.active{background:linear-gradient(145deg,rgba(0,127,255,.34),rgba(105,28,218,.33))!important;box-shadow:inset 0 0 0 1px rgba(76,194,255,.6),0 0 16px rgba(38,105,255,.25)!important}
+.mobile-nav button.active .nav-icon{color:#58d9ff!important;filter:drop-shadow(0 0 6px rgba(27,185,255,.7))}
+.whatsapp-float{background:linear-gradient(145deg,#08dc7a,#00a966)!important;box-shadow:0 6px 22px rgba(0,175,108,.33)!important}
+@media(hover:hover){.home-game-card:hover{transform:translateY(-3px)!important;border-color:#32d9ff!important}}
+@media(max-width:760px){
+ .wrap{padding-inline:12px}
+ .cx-logo{max-width:calc(100% - 75px)!important;gap:9px!important}
+ .cx-logo .cx-symbol{width:47px!important;height:47px!important;flex:0 0 47px!important;border-radius:15px!important}
+ .cx-logo .cx-word>span{font-size:clamp(17px,4.7vw,22px)!important;letter-spacing:-1.05px!important}
+ .cx-logo .cx-word small{font-size:9px!important;letter-spacing:.24em!important}
+ .head-slogan{height:128px!important;min-height:128px!important;padding:10px 44px 10px 10px!important;border-radius:22px!important}
+ .head-slogan .slogan-track{width:100%!important;animation:none!important;transform:none!important}
+ .head-slogan .slogan-copy{display:none!important}
+ .head-slogan .slogan-copy:first-child{display:flex!important;flex-direction:column!important;align-items:center!important;gap:8px!important;padding:0!important;white-space:normal!important;text-align:center!important}
+ .head-slogan .slogan-copy:first-child strong{font-size:clamp(20px,5.7vw,29px)!important;line-height:1.08!important}
+ .head-slogan .slogan-copy:first-child span{font-size:clamp(10px,3vw,14px)!important;line-height:1.2!important;letter-spacing:.045em!important}
+ .head-slogan .language-toggle{position:absolute!important;right:10px!important;top:50%!important;transform:translateY(-50%)!important}
+ .home-today{padding:14px 12px!important;border-radius:23px!important}
+ .home-section-heading h2{font-size:clamp(20px,5.7vw,26px)!important}
+ .home-game-card{padding:13px 14px!important;gap:6px!important;min-height:105px!important}
+ .home-game-card strong{font-size:clamp(14px,4vw,17px)!important;line-height:1.28!important}
+ .home-game-league{font-size:11px!important}
+ .mobile-nav{grid-template-columns:repeat(7,minmax(0,1fr))!important;border-radius:18px!important;gap:1px!important;padding:5px 3px!important}
+ .mobile-nav button{min-width:0!important;padding:4px 0!important}
+ .mobile-nav button span{font-size:clamp(8px,2.2vw,10px)!important}
+ .whatsapp-float{width:43px!important;height:43px!important;bottom:calc(101px + env(safe-area-inset-bottom))!important;right:12px!important}
+ body{padding-bottom:calc(95px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:370px){.cx-logo .cx-word>span{font-size:16px!important}.head-slogan .slogan-copy:first-child strong{font-size:19px!important}}
+@media(prefers-reduced-motion:reduce){.home-game-card{transition:none!important}}
