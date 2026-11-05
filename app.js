@@ -761,6 +761,9 @@ function setupScheduleAutoRefresh(){
   window.addEventListener("online",()=>{if(state.view==="schedule"||state.view==="favorites")loadSchedule(true)});
  }
 }
+function scheduleWithDeadline(promise,fallback,label,ms=14000){
+ return Promise.race([Promise.resolve(promise),new Promise(resolve=>setTimeout(()=>{console.warn("Schedule source timed out:",label);resolve(fallback)},ms))]).catch(error=>{console.warn("Schedule source failed:",label,error);return fallback});
+}
 async function loadSchedule(silent=false){
  const box=document.getElementById("scheduleDynamic")||(state.view==="favorites"?document.getElementById("favoriteScheduleDynamic"):null);
  if(!box)return;
@@ -780,19 +783,19 @@ async function loadSchedule(silent=false){
  try{
   const useSportsDb=!["Champions League","MLB","NHL"].includes(selected);
   const externalPromise=useSportsDb
-   ?Promise.all(offsets.map(n=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+dateKey(n)).then(r=>r.ok?r.json():null).catch(()=>null)))
+   ?Promise.all(offsets.map(n=>fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+dateKey(n),{signal:AbortSignal.timeout(9000)}).then(r=>r.ok?r.json():null).catch(()=>null)))
    :Promise.resolve([]);
   const startDate=new Date();startDate.setHours(0,0,0,0);
   startDate.setDate(startDate.getDate()+(range==="tomorrow"?1:0));
   const endDate=new Date(startDate);endDate.setDate(endDate.getDate()+(range==="month"?30:range==="week"?7:1));
   const dbPromise=sb.from("events").select("id,provider_id,channel_id,title,sport,starts_at,region,rights_scope,verified,status").gte("starts_at",startDate.toISOString()).lt("starts_at",endDate.toISOString()).order("starts_at");
   const [rs,db,mlb,nhl,ucl,espn]=await Promise.all([
-   externalPromise,
-   dbPromise,
-   includeMlb?mlbGames(offsets).catch(e=>{console.warn("MLB feed",e);return []}):Promise.resolve([]),
-   includeNhl?nhlGames(offsets).catch(e=>{console.warn("NHL feed",e);return []}):Promise.resolve([]),
-   includeUcl?championsGames(offsets):Promise.resolve([]),
-   Promise.all(espnKeys.map(key=>espnGames(offsets,key))).then(groups=>groups.flat())
+   scheduleWithDeadline(externalPromise,[],"SportsDB"),
+   scheduleWithDeadline(dbPromise,{data:[]},"Managed events"),
+   includeMlb?scheduleWithDeadline(mlbGames(offsets),[],"MLB"):Promise.resolve([]),
+   includeNhl?scheduleWithDeadline(nhlGames(offsets),[],"NHL"):Promise.resolve([]),
+   includeUcl?scheduleWithDeadline(championsGames(offsets),[],"Champions League"):Promise.resolve([]),
+   scheduleWithDeadline(Promise.all(espnKeys.map(key=>scheduleWithDeadline(espnGames(offsets,key),[],key))).then(groups=>groups.flat()),[],"ESPN")
   ]);
   if(requestId!==scheduleRequestId||(state.view!=="schedule"&&state.view!=="favorites")||(state.view==="schedule"&&(state.sport!==selected||scheduleRange!==range)))return;
   const managed=(db.data||[]).map(x=>{
@@ -828,6 +831,8 @@ async function loadSchedule(silent=false){
     if(next)next.onchange=fl.onchange;
    };
   }
+  const favoriteTarget=document.getElementById("favoriteScheduleDynamic");
+  if(favoriteTarget)favoriteTarget.innerHTML=scheduleCards();
   if(updated)updated.textContent="Actualizado "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
  }catch(e){
   if(requestId!==scheduleRequestId)return;
