@@ -26,4 +26,8 @@ assert.ok(sw.includes('await cache.addAll(CORE)'),'Offline shell install must be
 assert.ok(sw.includes('if(!insideScope(url))return'),'Service worker scope guard missing');
 assert.ok(sw.includes('if(!isAppAsset(url))return'),'Dynamic request caching regression');
 assert.ok(sw.includes('const INDEX=new URL("./index.html",SCOPE).href'),'Offline navigation fallback missing');
+assert.ok(app.includes('if(error)throw error;'),'Profile query errors must fail closed');
+assert.ok(app.includes('if(!p||p.status!=="active")'),'Inactive or missing profiles must be denied');
+assert.ok(app.includes('currentUser=null;currentProfile=null;'),'Session state must reset before verification');
+assert.ok(app.includes('if(!currentUser||currentProfile?.role!=="admin")return dashboard();'),'Admin UI guard missing');
 console.log('Static checks passed for version '+version);
