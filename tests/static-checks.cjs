@@ -21,4 +21,9 @@ assert.ok(app.includes('Math.min(4,queue.length)'),'SportsDB concurrency cap mis
 assert.ok(app.includes('SportsDB HTTP '),'SportsDB HTTP error detection missing');
 assert.ok(app.includes('dateEvent:g.startTimeUTC?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"})'),'NHL Dominican local date normalization missing');
 assert.ok(app.includes('finally(()=>clearTimeout(timeoutId))'),'Feed timeout cleanup missing');
+assert.ok(app.includes('serviceWorker.register("./sw.js?v='+version+'",{updateViaCache:"none"})'),'Service worker registration version mismatch');
+assert.ok(sw.includes('await cache.addAll(CORE)'),'Offline shell install must be atomic');
+assert.ok(sw.includes('if(!insideScope(url))return'),'Service worker scope guard missing');
+assert.ok(sw.includes('if(!isAppAsset(url))return'),'Dynamic request caching regression');
+assert.ok(sw.includes('const INDEX=new URL("./index.html",SCOPE).href'),'Offline navigation fallback missing');
 console.log('Static checks passed for version '+version);
