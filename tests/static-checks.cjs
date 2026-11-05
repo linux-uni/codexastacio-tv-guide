@@ -16,4 +16,9 @@ assert.ok(app.includes('sliderLocalDate(e)===dateKey(0)'),'Home local day filter
 assert.ok(app.includes('scheduleWithDeadline(mlbGames([0])'),'MLB home feed timeout missing');
 assert.ok(css.includes('.home-today-grid'),'Home layout CSS missing');
 assert.ok(!app.includes('window.confirm('),'Native confirmation dialog regression');
+assert.ok(app.includes('async function fetchSportsDbDays(offsets)'),'Bounded SportsDB worker missing');
+assert.ok(app.includes('Math.min(4,queue.length)'),'SportsDB concurrency cap missing');
+assert.ok(app.includes('SportsDB HTTP '),'SportsDB HTTP error detection missing');
+assert.ok(app.includes('dateEvent:g.startTimeUTC?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"})'),'NHL Dominican local date normalization missing');
+assert.ok(app.includes('finally(()=>clearTimeout(timeoutId))'),'Feed timeout cleanup missing');
 console.log('Static checks passed for version '+version);
