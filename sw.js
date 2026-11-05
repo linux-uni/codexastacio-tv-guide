@@ -1,6 +1,6 @@
 "use strict";
 const CACHE="cx-tv-v111";
-const CORE=["./index.html","./styles.css?v=111","./app.js?v=111","./core-utils.js?v=111","./sports-feeds.js?v=111","./view-helpers.js?v=111","./manifest.json?v=102","./champions.js?v=102","./icons/icon-192.png","./icons/icon-512.png"];
+const CORE=["./index.html","./styles.css?v=111","./responsive.css?v=111","./app.js?v=111","./core-utils.js?v=111","./sports-feeds.js?v=111","./view-helpers.js?v=111","./manifest.json?v=102","./champions.js?v=102","./icons/icon-192.png","./icons/icon-512.png"];
 const SCOPE=new URL(self.registration.scope);
 const INDEX=new URL("./index.html",SCOPE).href;
 const APP_ASSETS=new Set(CORE.map(path=>new URL(path,SCOPE).href));
