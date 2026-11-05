@@ -480,31 +480,3 @@ html.halloween-theme .daily-slider-heading p{color:#c4b2c9}
 .favorites-showcase>.muted,.favorites-showcase>p.muted{padding:13px;border:1px solid #27548e;border-radius:13px;background:rgba(24,65,118,.34);line-height:1.5}
 @media(min-width:680px){.favorite-chip-row.favorite-logo-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.favorites-showcase{padding:24px}}
 @media(max-width:350px){.favorite-chip-row.favorite-logo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.favorite-logo-frame{padding:10px}}
-
-/* Branded favorite removal confirmation v108 */
-.favorite-confirm-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,4,18,.76);backdrop-filter:blur(5px)}
-.favorite-confirm-dialog{width:min(100%,420px);overflow:hidden;border-radius:22px;border:2px solid #5ca5ff;background:linear-gradient(150deg,#112c58,#0b1434);color:#fff;box-shadow:0 0 28px rgba(28,157,255,.35),0 24px 70px rgba(0,0,0,.55)}
-.favorite-confirm-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:18px 20px;border-bottom:1px solid rgba(111,176,255,.35)}
-.favorite-confirm-heading h2{font-size:clamp(20px,5vw,26px);line-height:1.25;margin:0;color:#fff}
-.favorite-confirm-close{background:transparent;border:0;color:#fff;font-size:30px;line-height:1;cursor:pointer;min-width:36px;min-height:36px}
-.favorite-confirm-dialog p{margin:0;padding:22px 20px;font-size:clamp(16px,4.5vw,19px);line-height:1.5;overflow-wrap:anywhere}
-.favorite-confirm-actions{display:flex;gap:12px;padding:0 20px 20px}
-.favorite-confirm-actions button{flex:1;min-width:0;min-height:48px;border-radius:13px;font-size:15px;font-weight:750;cursor:pointer}
-.favorite-confirm-cancel{background:#172f55;color:#fff;border:1px solid #56caff}
-.favorite-confirm-delete{background:#db1031;color:#fff;border:1px solid #ff7c8e}
-.favorite-confirm-actions button:focus-visible,.favorite-confirm-close:focus-visible{outline:2px solid #fff;outline-offset:3px}
-@media(max-width:340px){.favorite-confirm-actions{gap:8px;padding:0 12px 15px}.favorite-confirm-heading{padding:14px}.favorite-confirm-dialog p{padding:18px 14px}}
-
-/* v110 home-first mobile dashboard */
-.home-dashboard{display:flex;flex-direction:column;gap:22px}
-.home-today{order:0}.home-dashboard>.daily-slider{order:1}.home-dashboard>.finder{order:2}.home-dashboard>.chips{order:3}.home-dashboard>.home-providers{order:4}
-.home-dashboard>.section-title{order:5}.home-dashboard>.channel-filters,.home-dashboard>.channel-filter-row{order:6}.home-dashboard>.grid:not(.provider-grid){order:7}
-.home-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.home-section-heading h2{font-size:clamp(21px,5vw,28px);margin:0}
-.home-text-link{border:0;background:transparent;color:#7dd6ff;font-weight:700;font-size:13px;white-space:nowrap;cursor:pointer}
-.home-today-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
-.home-game-card,.home-empty-games{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:16px;background:linear-gradient(135deg,#102745,#0a1730);border:1px solid #29456b}
-.home-game-card strong{font-size:16px;line-height:1.35}.home-game-league{color:#78d5ff;font-size:12px;font-weight:700}.home-empty-games{color:#a5bad5;line-height:1.5}
-.home-dashboard>.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:thin}
-.home-dashboard>.chips .chip{flex:0 0 auto;min-height:38px;padding:8px 14px;font-size:13px;border-radius:12px}
-.home-providers>.provider-grid{gap:12px}
-@media(max-width:600px){.home-providers .provider-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}.home-providers .provider-grid>*{min-width:0;max-width:100%;height:auto;min-height:145px;padding:12px}.home-providers .provider-grid h2,.home-providers .provider-grid h3{font-size:19px}.home-dashboard{gap:18px}}
