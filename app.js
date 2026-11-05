@@ -455,7 +455,7 @@ function setupFavoriteInteractions(){
  if(favoriteInteractionsBound)return;favoriteInteractionsBound=true;
  document.addEventListener("click",event=>{
   const fav=event.target.closest("[data-favorite-team]");
-  if(fav){event.preventDefault();const added=toggleFavoriteTeam(fav.dataset.favoriteTeam);showReminderToast(added?"Equipo agregado a Mis equipos.":"Equipo eliminado de Mis equipos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
+  if(fav){event.preventDefault();const name=fav.dataset.favoriteTeam; if(isTeamFavorite(name)&&!window.confirm("¿Quieres eliminar a "+name+" de Mis equipos favoritos?"))return;const added=toggleFavoriteTeam(name);showReminderToast(added?"Equipo agregado a Mis equipos.":"Equipo eliminado de Mis equipos.");renderScheduleDynamic();renderFavoriteHome();checkTransmissionAnnouncements([...scheduleEvents,...sliderEvents],true);return}
   const openSchedule=event.target.closest("[data-open-schedule]");if(openSchedule){event.preventDefault();state.view="schedule";state.sport="Todos";scheduleRange="month";dashboard();return} const calendar=event.target.closest("[data-calendar-event]");
   if(calendar){const e=[...scheduleEvents,...sliderEvents].find(x=>transmissionEventKey(x)===calendar.dataset.calendarEvent);if(!e)return;const start=eventStartInstant(e);if(!start){showReminderToast("Este partido no tiene hora de inicio.");return}downloadReminderCalendar({id:transmissionEventKey(e),title:e.strEvent||"Partido deportivo",startAt:start.toISOString(),league:e.strLeague||e.strSport||"Deporte",platform:confirmedTransmission(e).join(", ")});}
  });
