@@ -4,6 +4,7 @@ const html=fs.readFileSync('index.html','utf8');
 const app=fs.readFileSync('app.js','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const css=fs.readFileSync('styles.css','utf8');
+const utils=fs.readFileSync('core-utils.js','utf8');
 const version=html.match(/app\.js\?v=(\d+)/)?.[1];
 assert.ok(version,'App version missing');
 assert.ok(html.includes('styles.css?v='+version),'CSS and JS version mismatch');
@@ -30,4 +31,9 @@ assert.ok(app.includes('if(error)throw error;'),'Profile query errors must fail 
 assert.ok(app.includes('if(!p||p.status!=="active")'),'Inactive or missing profiles must be denied');
 assert.ok(app.includes('currentUser=null;currentProfile=null;'),'Session state must reset before verification');
 assert.ok(app.includes('if(!currentUser||currentProfile?.role!=="admin")return dashboard();'),'Admin UI guard missing');
+assert.ok(html.includes('core-utils.js?v='+version),'Core utils script missing');
+assert.ok(html.indexOf('core-utils.js?v=')<html.indexOf('app.js?v='),'Core utils must load first');
+assert.ok(sw.includes('core-utils.js?v='+version),'Offline core utils missing');
+assert.ok(app.includes('const {esc,safeDateTime,dateKey}=window.CXUtils;'),'App helpers not imported');
+assert.ok(utils.includes('Object.freeze({esc,safeDateTime,dateKey})'),'Shared utilities missing');
 console.log('Static checks passed for version '+version);
