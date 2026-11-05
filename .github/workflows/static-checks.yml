@@ -3,6 +3,7 @@ on:
   push:
     branches: [main, fix/home-schedule-loading-v111]
   pull_request:
+  workflow_dispatch:
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -18,3 +19,13 @@ jobs:
           node --check sw.js
       - name: Asset and PWA checks
         run: node tests/static-checks.cjs
+
+  live-feeds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check live sports feeds
+        run: node tests/live-feeds.cjs
