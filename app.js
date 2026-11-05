@@ -762,7 +762,9 @@ function setupScheduleAutoRefresh(){
  }
 }
 function scheduleWithDeadline(promise,fallback,label,ms=14000){
- return Promise.race([Promise.resolve(promise),new Promise(resolve=>setTimeout(()=>{console.warn("Schedule source timed out:",label);resolve(fallback)},ms))]).catch(error=>{console.warn("Schedule source failed:",label,error);return fallback});
+ let timeoutId;
+ const deadline=new Promise(resolve=>{timeoutId=setTimeout(()=>{console.warn("Schedule source timed out:",label);resolve(fallback)},ms)});
+ return Promise.race([Promise.resolve(promise).catch(error=>{console.warn("Schedule source failed:",label,error);return fallback}),deadline]).finally(()=>clearTimeout(timeoutId));
 }
 async function loadSchedule(silent=false){
  const box=document.getElementById("scheduleDynamic")||(state.view==="favorites"?document.getElementById("favoriteScheduleDynamic"):null);
