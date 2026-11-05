@@ -1176,7 +1176,24 @@ async function loadSportsSlider(force=false){
 }
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
-async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
+async function openSession(user){
+ currentUser=null;currentProfile=null;
+ try{
+  const {data:p,error}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);
+  if(error)throw error;
+  if(!p||p.status!=="active"){
+   await sb.auth.signOut().catch(e=>console.warn("Sign out:",e));
+   return login(p?.status==="blocked"?"Tu cuenta está restringida. Contacta al administrador.":"No se pudo verificar que tu cuenta esté activa. Contacta al administrador.");
+  }
+  currentUser=user;currentProfile=p;
+ }catch(e){
+  console.warn("Profile verification:",e);
+  await sb.auth.signOut().catch(err=>console.warn("Sign out:",err));
+  return login("No se pudo verificar tu acceso. Comprueba tu conexión e inténtalo de nuevo.");
+ }
+ try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}
+ dashboard();
+}
 
 function login(notice=""){
  app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
@@ -1200,6 +1217,7 @@ function accountPanel(){
 }
 
 function adminControlCenter(){
+ if(!currentUser||currentProfile?.role!=="admin")return dashboard();
  app.innerHTML='<main class="wrap admin-shell"><header class="top admin-head"><div><div class="brand">CodeXaStacio Control Center</div><div class="small muted">Administración total de usuarios, contenido y permisos</div></div><button id="adminBack" class="btn">Volver a la guía</button></header><nav class="admin-main-tabs"><button data-admin-tab="users" class="active">Usuarios</button><button data-admin-tab="platforms">Plataformas</button><button data-admin-tab="channels">Canales</button><button data-admin-tab="schedule">Programación</button><button data-admin-tab="logs">Actividad</button></nav><section id="adminWorkspace" class="panel"><div class="notice">Cargando…</div></section><div id="adminModal"></div></main>';
  document.getElementById("adminBack").onclick=dashboard;
  document.querySelectorAll("[data-admin-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.remove("active"));b.classList.add("active");const tab=b.dataset.adminTab;if(tab==="users")adminUsersWorkspace();else if(tab==="platforms")adminPlatformsWorkspace();else if(tab==="channels")adminChannelsWorkspace();else if(tab==="schedule")adminScheduleWorkspace();else adminLogsWorkspace()});
