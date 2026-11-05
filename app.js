@@ -1,5 +1,6 @@
 "use strict";
 const {esc,safeDateTime,dateKey}=window.CXUtils;
+const {scheduleWithDeadline,fetchSportsDbDays}=window.CXSportsFeeds;
 const app=document.getElementById("app");
 const CFG={url:"https://dzlkpulknbpxibcvdhom.supabase.co",key:"sb_publishable_v4v_GxlTHZNqSYqO-Ij7bQ_IPPFU7sk",admin:"pecristoastacio@gmail.com"};
 const channels=[
@@ -758,28 +759,6 @@ function setupScheduleAutoRefresh(){
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&(state.view==="schedule"||state.view==="favorites"))loadSchedule(true)});
   window.addEventListener("online",()=>{if(state.view==="schedule"||state.view==="favorites")loadSchedule(true)});
  }
-}
-function scheduleWithDeadline(promise,fallback,label,ms=14000){
- let timeoutId;
- const deadline=new Promise(resolve=>{timeoutId=setTimeout(()=>{console.warn("Schedule source timed out:",label);resolve(fallback)},ms)});
- return Promise.race([Promise.resolve(promise).catch(error=>{console.warn("Schedule source failed:",label,error);return fallback}),deadline]).finally(()=>clearTimeout(timeoutId));
-}
-async function fetchSportsDbDays(offsets){
- const queue=offsets.map(dateKey),results=new Array(queue.length);
- let cursor=0;
- async function worker(){
-  while(cursor<queue.length){
-   const index=cursor++,day=queue[index];
-   try{
-    const response=await fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+day,{signal:AbortSignal.timeout(9000)});
-    if(!response.ok)throw Error("SportsDB HTTP "+response.status);
-    const data=await response.json();
-    results[index]=data&&Array.isArray(data.events)?data:null;
-   }catch(error){console.warn("SportsDB feed "+day,error);results[index]=null}
-  }
- }
- await Promise.all(Array.from({length:Math.min(4,queue.length)},()=>worker()));
- return results;
 }
 async function loadSchedule(silent=false){
  const box=document.getElementById("scheduleDynamic")||(state.view==="favorites"?document.getElementById("favoriteScheduleDynamic"):null);
