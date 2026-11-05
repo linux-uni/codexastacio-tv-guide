@@ -1293,4 +1293,4 @@ function loadSupabase(){
 }
 observeInterfaceLanguage();
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=78").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=111",{updateViaCache:"none"}).catch(e=>console.warn("SW:",e)))}
