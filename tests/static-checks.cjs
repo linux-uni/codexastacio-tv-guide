@@ -42,4 +42,8 @@ assert.ok(html.indexOf('core-utils.js?v=')<html.indexOf('sports-feeds.js?v='),'S
 assert.ok(html.indexOf('sports-feeds.js?v=')<html.indexOf('app.js?v='),'Sports module must load before app');
 assert.ok(sw.includes('sports-feeds.js?v='+version),'Offline sports feeds module missing');
 assert.ok(app.includes('const {scheduleWithDeadline,fetchSportsDbDays}=window.CXSportsFeeds;'),'Sports helpers not imported');
+assert.ok(html.includes('view-helpers.js?v='+version),'View helpers missing');
+assert.ok(html.indexOf('view-helpers.js?v=')<html.indexOf('app.js?v='),'View helpers load order wrong');
+assert.ok(sw.includes('view-helpers.js?v='+version),'View helpers not cached');
+assert.ok(app.includes('const {sliderLocalDate,canViewProfile}=window.CXViewHelpers;'),'View helper imports missing');
 console.log('Static checks passed for version '+version);
