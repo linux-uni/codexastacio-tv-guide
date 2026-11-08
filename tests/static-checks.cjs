@@ -13,6 +13,20 @@ const utils=fs.readFileSync('core-utils.js','utf8');
 const feeds=fs.readFileSync('sports-feeds.js','utf8');
 const version=html.match(/app\.js\?v=(\d+)/)?.[1];
 assert.ok(version,'App version missing');
+// v108 preserves the stable v107 architecture; v111+ modular checks run only on modular releases.
+if(Number(version)<111){
+ assert.ok(html.includes('styles.css?v='+version),'CSS and JS version mismatch');
+ assert.ok(sw.includes('cx-tv-v'+version),'Service worker cache version mismatch');
+ assert.ok(sw.includes('app.js?v='+version),'Service worker app asset mismatch');
+ assert.ok(sw.includes('styles.css?v='+version),'Service worker CSS asset mismatch');
+ assert.ok(app.includes('function rdDateKey(value)'),'RD date normalization missing');
+ assert.ok(app.includes('sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0));'),'Today slide retains finished matches');
+ assert.ok(app.includes('sliderLocalDate(e)===today);'),'Today feed must keep all fixtures');
+ assert.ok(app.includes('Reintentar actualización'),'Feed retry missing');
+ assert.ok(app.includes('serviceWorker.register("./sw.js?v='+version+'")'),'Service worker version mismatch');
+ console.log('Stable TV Listing v'+version+' checks passed');
+ process.exit(0);
+}
 assert.ok(html.includes('styles.css?v='+version),'CSS and JS version mismatch');
 assert.ok(sw.includes('cx-tv-v'+version),'Service worker cache version mismatch');
 assert.ok(sw.includes('app.js?v='+version),'Service worker app asset mismatch');

@@ -318,6 +318,7 @@ function channelEvent(c){return sliderEvents.find(x=>c.sports.some(s=>{const a=S
 function channelCards(list){let rows=list.map(c=>({c,e:channelEvent(c)}));if(channelFilter!=="Todos"&&channelFilter!=="Próximos")rows=rows.filter(({c})=>c.sports.includes(channelFilter));return `<div class="channel-showcase">${rows.map(({c,e},i)=>{const sport=e?.strSport||c.sports[0],img=e&&(e.strThumb||e.strPoster||e.strFanart);return `<article class="channel-tile searchable" data-search="${esc((c.name+" "+c.n+" "+c.sports.join(" ")+" "+(e?.strEvent||"")).toLowerCase())}" ${img?`style="--channel-bg:url('${esc(img)}')"`:""}><div class="channel-art"></div><div class="channel-body"><div class="channel-head"><div class="channel-identity"><span class="channel-logo">${esc(c.name)}</span><span class="channel-number">CH ${esc(c.n)}</span></div>${sportMark(sport)}</div><span class="next-badge">PRÓXIMO</span><h3>${esc(e?.strEvent||c.sports.slice(0,2).join(" • "))}</h3><div class="channel-meta">${esc(e?[e.dateEvent,e.strTime,e.strLeague].filter(Boolean).join(" • "):"Programación deportiva")}</div><div class="progress-track"><i style="width:${25+(i%4)*15}%"></i></div><div class="now-next"><span><b>Ahora</b> Guía deportiva</span><span><b>A continuación</b> ${esc(e?.strEvent||"Por actualizar")}</span></div></div></article>`}).join("")}</div>`}
 function eventCards(list){return `<div class="grid">${list.map(e=>`<article class="card event searchable" data-search="${esc((e.sport+" "+e.title+" "+e.network+" "+e.channel).toLowerCase())}"><div class="row"><strong>${esc(e.sport)}</strong><span class="badge">${esc(e.status)}</span></div><h3>${esc(e.title)}</h3><div class="small muted">📺 ${esc(e.network)}</div><div class="notice small">DISH: ${esc(e.channel)} • horarios por TV listing</div></article>`).join("")}</div>`}
 function dateKey(offset=0){const d=new Date();d.setDate(d.getDate()+offset);const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");return `${y}-${m}-${day}`}
+function rdDateKey(value){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Santo_Domingo",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value);const fields=Object.fromEntries(parts.filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));return `${fields.year}-${fields.month}-${fields.day}`}
 const FAVORITES_STORAGE_PREFIX="cx-tv-favorites-v1:";
 const TRANSMISSION_ALERTS_PREFIX="cx-tv-transmission-alerts-v1:";
 const TRANSMISSION_STATE_PREFIX="cx-tv-transmission-state-v1:";
@@ -505,7 +506,7 @@ function normalizeEspnCompetition(event,competition,feedKey,path){
   strHomeTeamBadge:home?.athlete?.headshot?.href||home?.team?.logo||(feedKey==="UFC"&&home?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+home.id+".png":""),
   strAwayTeamBadge:away?.athlete?.headshot?.href||away?.team?.logo||(feedKey==="UFC"&&away?.id?"https://a.espncdn.com/i/headshots/mma/players/full/"+away.id+".png":""),
   strLeague:league,strSport:feedKey==="UFC"?"MMA":feedKey==="F1"?"Motor Racing":feedKey==="SOCCER"?"Soccer":feedKey==="NCAA"?league:feedKey==="TENIS"?"Tennis":feedKey==="NFL"?"American Football":feedKey==="NHL"?"Ice Hockey":feedKey==="MLB"?"Baseball":"Basketball",
-  strTimestamp:valid?d.toISOString():"",dateEvent:valid?new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d):"",
+  strTimestamp:valid?d.toISOString():"",dateEvent:valid?rdDateKey(d):"",
   strTime:valid?d.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",
   strStatus:type.state==="in"?"LIVE":type.completed?"FINAL":type.detail||type.name||"",
   strProgress:type.state==="in"?(status.displayClock||type.shortDetail||""):"",
@@ -1065,12 +1066,12 @@ function shuffleDailyEvents(avoidKey=""){
 }
 function showSlide(step=0){
  const hero=document.getElementById("sportsHero");if(!hero)return;
- sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&sliderEventActive(e));
+ sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0));
  const count=document.getElementById("dailySliderCount");
  if(!sliderEvents.length){
-  if(count)count.textContent="Sin eventos activos";
+  if(count)count.textContent="Sin datos confirmados";
   hero.className="hero-slide daily-empty";hero.style.backgroundImage="";
-  hero.innerHTML='<div class="daily-event-card"><div class="daily-card-body"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h3>No hay eventos activos ahora</h3><p class="muted">La agenda se actualiza automáticamente. Los eventos finalizados se retiran.</p></div></div>';
+  hero.innerHTML='<div class="daily-event-card"><div class="daily-card-body"><span class="badge">HOY • '+esc(dateKey(0))+'</span><h3>No pudimos confirmar la agenda de hoy</h3><p class="muted">El proveedor podría no estar respondiendo. Esto no significa que no haya partidos programados.</p><button type="button" class="btn" onclick="loadSportsSlider(true)">Reintentar actualización</button> <a class="google-feed-btn" href="https://www.premierleague.com/en/fixtures" target="_blank" rel="noopener noreferrer">Consultar fútbol oficial ↗</a></div></div>';
   return;
  }
  if(slideIndex>=sliderEvents.length)slideIndex=sliderEvents.length-1;
@@ -1085,7 +1086,7 @@ function showSlide(step=0){
 function sliderLocalDate(e){
  if(!e?.strTimestamp)return String(e?.dateEvent||"").slice(0,10);
  const d=new Date(e.strTimestamp);if(!Number.isFinite(d.getTime()))return String(e.dateEvent||"").slice(0,10);
- return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo"}).format(d);
+ return rdDateKey(d);
 }
 function sliderEventKey(e){
  const clean=x=>String(x||"").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
@@ -1107,7 +1108,7 @@ async function loadSportsSlider(force=false){
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
   const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
-  const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today&&sliderEventActive(e));
+  const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>{
@@ -1240,4 +1241,4 @@ function loadSupabase(){
 }
 observeInterfaceLanguage();
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=78").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=108").catch(e=>console.warn("SW:",e)))}
