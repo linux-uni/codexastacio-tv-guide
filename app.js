@@ -307,7 +307,8 @@ function cflBroadcastPlatforms(e){
  return ["DAZN","CFL+"].filter(name=>signals.includes(name.toLowerCase()));
 }
 function cflMatchesForPlatform(name){
- return sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&cflBroadcastPlatforms(e).includes(name));
+ const platform=streamPlatform(name)||String(name||"").trim();
+ return sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&cflBroadcastPlatforms(e).includes(platform));
 }
 function providerEventCards(){
  const digital=providers.filter(p=>!p.is_base&&String(p.name).toLowerCase()!=="dish").slice(0,6);
@@ -326,7 +327,7 @@ function providerEventCards(){
   const title=found?.strEvent||(isNetflix?"No hay próximas transmisiones confirmadas":"Próximos eventos");
   const meta=found?providerEventDate(found):"La tarjeta se actualizará cuando haya un evento anunciado.";
   const matchup=found?matchupVisual(found,true):"";
-  const cflDetails=isCfl?'<p class="small muted">'+(name==="CFL+"?"CFL+ • acceso gratuito para público internacional":"DAZN • retransmisión internacional confirmada para esta Grey Cup")+'</p>'+
+  const cflDetails=isCfl?'<p class="small muted">'+(streamPlatform(name)==="CFL+"?"CFL+ • acceso gratuito para público internacional":"DAZN • retransmisión internacional confirmada para esta Grey Cup")+'</p>'+
    '<a class="google-feed-btn" href="https://cfl.prod.s.cfl.ca/article/where-to-watch-the-113th-grey-cup" target="_blank" rel="noopener noreferrer">Ver fuente oficial CFL ↗</a>':"";
   const otherCfl=cflMatches.slice(1,4).map(e=>'<p class="small muted">CFL • '+esc(e.strEvent)+' · '+esc(providerEventDate(e))+'</p>').join("");
   return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")+" CFL Grey Cup").toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div>'+matchup+'<div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p>'+cflDetails+otherCfl+'</div></article>';
