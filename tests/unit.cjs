@@ -63,7 +63,7 @@ test("CFL digital platform labels require confirmed broadcast signals",()=>{
  const official={strLeague:"CFL Grey Cup",strEvent:"Montreal Alouettes vs Edmonton Elks",dateEvent:"2026-11-15",strTVStation:"DAZN, CFL+"};
  const unconfirmed={strLeague:"CFL Regular Season",strEvent:"Other CFL match",dateEvent:"2026-11-15",strTVStation:"TSN"};
  const ctx=vm.createContext({
-  sliderEvents:[official,unconfirmed],providers:[{name:"DAZN"},{name:"Disney+"}],
+  sliderEvents:[official,unconfirmed],scheduleEvents:[],providers:[{name:"DAZN"},{name:"Disney+"}],
   dateKey:()=> "2026-11-15",sliderLocalDate:e=>e.dateEvent,
   leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"NFL",
   streamPlatform:name=>({dazn:"DAZN","cfl+":"CFL+"})[String(name).toLowerCase()]||"",
