@@ -23,6 +23,13 @@ if(Number(version)<111){
  assert.ok(app.includes('sliderEvents=sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0));'),'Today slide retains finished matches');
  assert.ok(app.includes('sliderLocalDate(e)===today);'),'Today feed must keep all fixtures');
  assert.ok(app.includes('Reintentar actualización'),'Feed retry missing');
+ assert.ok(app.includes('function cflBroadcastPlatforms(e)'),'CFL signal verification helper missing');
+ assert.ok(app.includes('function cflMatchesForPlatform(name)'),'CFL digital platform lookup missing');
+ assert.ok(app.includes('digital.push({name:"CFL+"'),'CFL+ streaming tile missing');
+ assert.ok(app.includes('const cflMatches=cflMatchesForPlatform(name)'),'CFL match cards not attached to providers');
+ assert.ok(app.includes('if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e)'),'CFL platform assignments must use confirmed signals');
+ assert.ok(sw.includes('cfl-platforms-20261115'),'CFL release cache rotation missing');
+ 
  assert.ok(app.includes('serviceWorker.register("./sw.js?v='+version+'")'),'Service worker version mismatch');
  console.log('Stable TV Listing v'+version+' checks passed');
  process.exit(0);
