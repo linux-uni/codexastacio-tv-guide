@@ -10,7 +10,7 @@ const channels=[
 {n:"400",name:"Tennis Channel",sat:"110°W",fmt:"HD",sports:["Tenis"]},
 {n:"404",name:"SEC Network",sat:"119°W",fmt:"HD",sports:["NFL","NCAA"]}
 ];
-const providers=[{name:"DISH",tag:"110°W / 119°W",sports:"NFL NBA MLB NHL Fútbol Tenis NCAA"},{name:"Disney+",tag:"Streaming",sports:"ESPN deportes fútbol hockey tenis"},{name:"DAZN",tag:"Streaming",sports:"Boxeo NFL fútbol MMA"},{name:"Netflix",tag:"Streaming",sports:"Eventos deportivos especiales"},{name:"Paramount+",tag:"Streaming",sports:"Fútbol UEFA deportes CBS"}];
+const providers=[{name:"DISH",tag:"110°W / 119°W",sports:"NFL NBA MLB NHL Fútbol Tenis NCAA"},{name:"Disney+",tag:"Streaming",sports:"ESPN deportes fútbol hockey tenis"},{name:"DAZN",tag:"Streaming",sports:"Boxeo NFL fútbol MMA CFL Grey Cup"},{name:"Netflix",tag:"Streaming",sports:"Eventos deportivos especiales"},{name:"Paramount+",tag:"Streaming",sports:"Fútbol UEFA deportes CBS"}];
 const events=[
 {sport:"NFL",title:"NFL • Próximos partidos",network:"NFL Network",channel:"154",status:"PROGRAMACIÓN"},
 {sport:"NBA",title:"NBA • Próximos partidos",network:"NBA TV",channel:"156",status:"PROGRAMACIÓN"},
@@ -144,7 +144,7 @@ const OFFICIAL_SCHEDULES={
  CFL:"https://www.cfl.ca/schedule/"
 };
 function officialScheduleLink(e){const k=leagueKey(e);return k?OFFICIAL_SCHEDULES[k]||"":""}
-function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(/\bcfl\b|grey cup/.test(l))return "CFL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
+function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(/\bcfl\b|grey cup|canadian football league/.test(l)||/canadian football/.test(s))return "CFL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
 
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
@@ -298,17 +298,39 @@ function providerEventDate(e){
  const [y,m,d]=e.dateEvent.split("-").map(Number),date=new Date(Date.UTC(y,m-1,d,12));
  return [date.toLocaleDateString("es-DO",{timeZone:"America/Santo_Domingo",day:"numeric",month:"short"}),e.strTime].filter(Boolean).join(" • ");
 }
+// Only use explicitly listed broadcast signals: CFL+ carries the season
+// internationally; DAZN was officially confirmed for the 113th Grey Cup.
+function cflBroadcastPlatforms(e){
+ if(leagueKey(e)!=="CFL")return [];
+ const signals=[e?.strTVStation,e?.strBroadcast,...(Array.isArray(e?._watchOptions)?e._watchOptions:[])]
+  .filter(Boolean).flatMap(value=>String(value).split(/[,;|]/).map(part=>part.trim().toLowerCase()));
+ return ["DAZN","CFL+"].filter(name=>signals.includes(name.toLowerCase()));
+}
+function cflMatchesForPlatform(name){
+ const platform=streamPlatform(name)||String(name||"").trim();
+ return sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&cflBroadcastPlatforms(e).includes(platform));
+}
 function providerEventCards(){
  const digital=providers.filter(p=>!p.is_base&&String(p.name).toLowerCase()!=="dish").slice(0,6);
+ const cflPlusMatches=cflMatchesForPlatform("CFL+");
+ // CFL+ is a free public service, not a paid entitlement in the providers table.
+ if(cflPlusMatches.length&&!digital.some(p=>/^cfl\+$/i.test(p.name)))
+  digital.push({name:"CFL+",tag:"Streaming gratuito internacional",_publicCfl:true});
  if(!digital.length)return '<div class="notice">No hay plataformas digitales habilitadas para esta cuenta.</div>';
  return digital.map(p=>{
   const name=p.name,isNetflix=/^netflix$/i.test(name);
-  const found=(isNetflix?netflixUpcomingEvent():null)||sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name.toLowerCase()===name.toLowerCase()));
-  const status=found?(found._netflixSchedule?"EN NETFLIX":"PRÓXIMO"):"SIN EVENTO CONFIRMADO";
+  const cflMatches=cflMatchesForPlatform(name);
+  const found=cflMatches[0]||(isNetflix?netflixUpcomingEvent():null)||
+   sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name.toLowerCase()===name.toLowerCase()));
+  const isCfl=!!(found&&cflMatches.length);
+  const status=isCfl?"CFL • EVENTO CONFIRMADO":found?(found._netflixSchedule?"EN NETFLIX":"PRÓXIMO"):"SIN EVENTO CONFIRMADO";
   const title=found?.strEvent||(isNetflix?"No hay próximas transmisiones confirmadas":"Próximos eventos");
   const meta=found?providerEventDate(found):"La tarjeta se actualizará cuando haya un evento anunciado.";
   const matchup=found?matchupVisual(found,true):"";
-  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")).toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div>'+matchup+'<div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p></div></article>';
+  const cflDetails=isCfl?'<p class="small muted">'+(streamPlatform(name)==="CFL+"?"CFL+ • acceso gratuito para público internacional":"DAZN • retransmisión internacional confirmada para esta Grey Cup")+'</p>'+
+   '<a class="google-feed-btn" href="https://cfl.prod.s.cfl.ca/article/where-to-watch-the-113th-grey-cup" target="_blank" rel="noopener noreferrer">Ver fuente oficial CFL ↗</a>':"";
+  const otherCfl=cflMatches.slice(1,4).map(e=>'<p class="small muted">CFL • '+esc(e.strEvent)+' · '+esc(providerEventDate(e))+'</p>').join("");
+  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")+" CFL Grey Cup").toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div>'+matchup+'<div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p>'+cflDetails+otherCfl+'</div></article>';
  }).join("");
 }
 
@@ -1010,6 +1032,7 @@ function isNetflixNflEvent(e){
 function demoWhereToWatch(e){
  const sport=(e.strSport||"").toLowerCase(),league=(e.strLeague||"").toLowerCase(),name=(e.strEvent||"").toLowerCase();
  if(isNetflixNflEvent(e))return [{name:"Netflix",label:"NFL en vivo"}];
+ if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e).map(name=>({name,label:name==="CFL+"?"Gratis para público internacional":"Partido CFL confirmado por la liga"}));
  const out=[];
  const add=(name,label)=>{if(!out.some(x=>x.name===name))out.push({name,label})};
  if(/american football|basketball|baseball|ice hockey|tennis/.test(sport))add("DISH","Canales deportivos");
@@ -1024,6 +1047,7 @@ function streamPlatform(value){
  const name=String(value||"").trim();
  if(!name)return "";
  if(/dazn/i.test(name))return "DAZN";
+ if(/^cfl\+$/i.test(name))return "CFL+";
  if(/netflix/i.test(name))return "Netflix";
  if(/paramount\+?/i.test(name))return "Paramount+";
  if(/disney\s*\+\s*premium/i.test(name))return "Disney+ Premium";
@@ -1036,7 +1060,7 @@ function watchBadges(e){
  if(isChampionsLeague(e))return championsWatch(e);
  const sourceValues=[...(Array.isArray(e._watchOptions)?e._watchOptions:[]),e._providerName,e.strTVStation,e.strChannel,e.strBroadcast].filter(Boolean).flatMap(x=>String(x).split(/[,;|]/).map(y=>y.trim()).filter(Boolean));
  const platforms=[...new Set(sourceValues.map(streamPlatform).filter(Boolean))];
- const platformLabel=name=>name==="ESPN"?"Canal/señal informada por el feed; streaming depende del país":name==="ESPN+"?"Streaming; disponibilidad regional por confirmar":name==="Disney+ Premium"?"Streaming":"Streaming";
+ const platformLabel=name=>name==="CFL+"?"Streaming gratuito fuera de Canadá":name==="DAZN"&&leagueKey(e)==="CFL"?"CFL: transmisión internacional anunciada":name==="ESPN"?"Canal/señal informada por el feed; streaming depende del país":name==="ESPN+"?"Streaming; disponibilidad regional por confirmar":name==="Disney+ Premium"?"Streaming":"Streaming";
  const rows=platforms.map(name=>({name,label:platformLabel(name)}));
  const dishChannel=e._channelName;
  if(dishChannel)rows.push({name:dishChannel,label:"Canal registrado en DISH"});
