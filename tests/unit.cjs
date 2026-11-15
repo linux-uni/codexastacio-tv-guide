@@ -54,3 +54,31 @@ test("SportsDB loader limits concurrency and isolates failures",async()=>{
  assert.ok(peak<=4,"concurrency exceeded four");
  assert.ok(peak>=2,"requests were not concurrent");
 });
+
+test("CFL digital platform labels require confirmed broadcast signals",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf("function cflBroadcastPlatforms(e){");
+ const end=app.indexOf("\nfunction renderProviders()",start);
+ assert.ok(start>=0&&end>start,"CFL digital provider helpers missing");
+ const official={strLeague:"CFL Grey Cup",strEvent:"Montreal Alouettes vs Edmonton Elks",dateEvent:"2026-11-15",strTVStation:"DAZN, CFL+"};
+ const unconfirmed={strLeague:"CFL Regular Season",strEvent:"Other CFL match",dateEvent:"2026-11-15",strTVStation:"TSN"};
+ const ctx=vm.createContext({
+  sliderEvents:[official,unconfirmed],providers:[{name:"DAZN"},{name:"Disney+"}],
+  dateKey:()=> "2026-11-15",sliderLocalDate:e=>e.dateEvent,
+  leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"NFL",
+  streamPlatform:name=>({dazn:"DAZN","cfl+":"CFL+"})[String(name).toLowerCase()]||"",
+  matchupVisual:()=>"",providerEventDate:e=>e.dateEvent,
+  demoWhereToWatch:()=>[],netflixUpcomingEvent:()=>null,esc:s=>String(s)
+ });
+ vm.runInContext(app.slice(start,end),ctx);
+ assert.deepEqual(Array.from(ctx.cflBroadcastPlatforms(official)),["DAZN","CFL+"]);
+ assert.deepEqual(Array.from(ctx.cflBroadcastPlatforms(unconfirmed)),[]);
+ assert.equal(ctx.cflMatchesForPlatform("dazn").length,1);
+ assert.equal(ctx.cflMatchesForPlatform("CFL+").length,1);
+ assert.equal(ctx.cflMatchesForPlatform("Disney+").length,0);
+ const html=ctx.providerEventCards();
+ assert.match(html,/provider-logo">DAZN<\/div>/);
+ assert.match(html,/provider-logo">CFL\+<\/div>/);
+ assert.match(html,/Montreal Alouettes vs Edmonton Elks/);
+ assert.doesNotMatch(html,/Other CFL match/);
+});
