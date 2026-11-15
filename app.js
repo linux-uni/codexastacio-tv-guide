@@ -400,9 +400,9 @@ async function loadProviderUpcomingEvents(force=false){
   const start=new Date(dateKey(0)+"T00:00:00-04:00"),end=new Date(dateKey(7)+"T00:00:00-04:00");
   const dbPromise=sb.from("events").select("id,provider_id,title,sport,starts_at,region,rights_scope,verified,status")
    .eq("verified",true).gte("starts_at",start.toISOString()).lt("starts_at",end.toISOString())
-   .order("starts_at").limit(120);
+   .order("starts_at").limit(120).then(result=>result).catch(error=>{console.warn("Provider DB schedule",error);return {data:[]}});
   const [_,database]=await Promise.all([Promise.all([worker(),worker()]),dbPromise]);
-  const managed=(database?.data||[]).filter(x=>x.verified&&x.provider_id&&x.starts_at&&x.title).map(x=>{
+  const managed=(database?.data||[]).filter(x=>x.verified&&x.provider_id&&x.starts_at&&x.title&&Number.isFinite(new Date(x.starts_at).getTime())).map(x=>{
    const instant=new Date(x.starts_at),provider=providers.find(p=>String(p.id)===String(x.provider_id));
    return {idEvent:"managed-"+x.id,strEvent:x.title,strSport:x.sport||"Deportes",
     strLeague:x.sport||"Deportes",strTimestamp:x.starts_at,dateEvent:rdDateKey(instant),
