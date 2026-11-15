@@ -310,31 +310,150 @@ function cflMatchesForPlatform(name){
  const platform=streamPlatform(name)||String(name||"").trim();
  return sliderEvents.filter(e=>sliderLocalDate(e)===dateKey(0)&&cflBroadcastPlatforms(e).includes(platform));
 }
+// Independent event carousels for each available streaming platform.
+// Broadcast rights are attributed only from supplied broadcaster metadata.
+let providerUpcomingEvents=[],providerUpcomingLoadedAt=0,providerUpcomingLoading=false;
+let providerCarouselBound=false,providerCarouselTimer=null;
+function canonicalProviderName(name){
+ const key=streamPlatform(name);
+ return key==="Disney+ Premium"?"Disney+":key;
+}
+function eventBroadcastProviders(e){
+ if(!e||(e._managed&&!e._verified))return [];
+ const signals=[e.strTVStation,e.strBroadcast,e.strChannel,
+  ...(Array.isArray(e._watchOptions)?e._watchOptions:[]),
+  ...(e._managed&&e._verified?[e._providerName]:[])]
+  .filter(Boolean).flatMap(value=>String(value).split(/[,;|]/).map(part=>part.trim()));
+ if(e._netflixSchedule)signals.push("Netflix");
+ return [...new Set(signals.map(canonicalProviderName).filter(Boolean))];
+}
+function providerEventsForPlatform(name){
+ const key=canonicalProviderName(name),today=dateKey(0),lastDay=dateKey(6);
+ if(!key)return [];
+ const candidates=[...sliderEvents,...scheduleEvents,...providerUpcomingEvents];
+ if(key==="Netflix"){
+  const announced=netflixUpcomingEvent();
+  if(announced)candidates.push(announced);
+ }
+ const seen=new Set();
+ return candidates.filter(e=>{
+  const day=sliderLocalDate(e);
+  // The existing Netflix calendar can contain the next special beyond six days.
+  if(!e?.strEvent||!day||day<today||(day>lastDay&&!e._netflixSchedule))return false;
+  if(!eventBroadcastProviders(e).includes(key))return false;
+  const id=day+"|"+String(e.strEvent).normalize("NFD").toLowerCase().replace(/[^a-z0-9]/g,"");
+  if(seen.has(id))return false;
+  seen.add(id);return true;
+ }).sort((x,y)=>String(x.strTimestamp||x.dateEvent).localeCompare(String(y.strTimestamp||y.dateEvent))).slice(0,8);
+}
+function providerSlideIndex(current,step,count){
+ return count>0?((current+step)%count+count)%count:0;
+}
+function changeProviderSlide(card,step){
+ const slides=[...card.querySelectorAll(".provider-slide")];
+ if(slides.length<2)return;
+ const active=slides.findIndex(slide=>!slide.hidden),next=providerSlideIndex(Math.max(active,0),step,slides.length);
+ slides.forEach((slide,index)=>{slide.hidden=index!==next;slide.setAttribute("aria-hidden",String(index!==next))});
+ const counter=card.querySelector(".provider-slide-counter");
+ if(counter)counter.textContent=(next+1)+" / "+slides.length;
+}
+function setupProviderCarousels(){
+ if(!providerCarouselBound){
+  providerCarouselBound=true;
+  document.addEventListener("click",event=>{
+   const button=event.target.closest("[data-platform-step]");
+   if(!button||button.disabled)return;
+   const card=button.closest(".provider-event");
+   if(card)changeProviderSlide(card,Number(button.dataset.platformStep)||0);
+  });
+ }
+ if(providerCarouselTimer)return;
+ providerCarouselTimer=setInterval(()=>{
+  if(document.visibilityState!=="visible"||window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)return;
+  document.querySelectorAll("#providerGrid .provider-event").forEach(card=>{
+   if(card.querySelectorAll(".provider-slide").length<2||card.matches(":hover")||card.contains(document.activeElement))return;
+   const rect=card.getBoundingClientRect();
+   if(rect.bottom<0||rect.top>window.innerHeight||rect.right<0||rect.left>window.innerWidth)return;
+   changeProviderSlide(card,1);
+  });
+ },8500);
+}
+async function loadProviderUpcomingEvents(force=false){
+ if(!document.getElementById("providerGrid")||!sb||!currentUser||!canView("providers"))return;
+ if(providerUpcomingLoading||(!force&&providerUpcomingLoadedAt&&Date.now()-providerUpcomingLoadedAt<15*60*1000))return;
+ providerUpcomingLoading=true;
+ try{
+  // Six future days, with at most two in-flight SportsDB requests; only entries
+  // explicitly naming a broadcaster will be shown.
+  const dates=Array.from({length:6},(_,i)=>dateKey(i+1)),queue=[...dates],external=[];
+  async function worker(){
+   while(queue.length){
+    const day=queue.shift();
+    try{
+     const response=await fetch("https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d="+day,{signal:AbortSignal.timeout(9000)});
+     if(!response.ok)continue;
+     const payload=await response.json();
+     external.push(...(payload?.events||[]).filter(e=>e?.strEvent&&eventBroadcastProviders(e).length));
+    }catch(error){console.warn("Provider schedule feed "+day,error)}
+   }
+  }
+  const start=new Date(dateKey(0)+"T00:00:00-04:00"),end=new Date(dateKey(7)+"T00:00:00-04:00");
+  const dbPromise=sb.from("events").select("id,provider_id,title,sport,starts_at,region,rights_scope,verified,status")
+   .eq("verified",true).gte("starts_at",start.toISOString()).lt("starts_at",end.toISOString())
+   .order("starts_at").limit(120).then(result=>result).catch(error=>{console.warn("Provider DB schedule",error);return {data:[]}});
+  const [_,database]=await Promise.all([Promise.all([worker(),worker()]),dbPromise]);
+  const managed=(database?.data||[]).filter(x=>x.verified&&x.provider_id&&x.starts_at&&x.title&&Number.isFinite(new Date(x.starts_at).getTime())).map(x=>{
+   const instant=new Date(x.starts_at),provider=providers.find(p=>String(p.id)===String(x.provider_id));
+   return {idEvent:"managed-"+x.id,strEvent:x.title,strSport:x.sport||"Deportes",
+    strLeague:x.sport||"Deportes",strTimestamp:x.starts_at,dateEvent:rdDateKey(instant),
+    strTime:instant.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD",
+    _managed:true,_verified:true,_providerName:provider?.name||"",_rightsScope:x.rights_scope||x.region||""};
+  }).filter(e=>eventBroadcastProviders(e).length);
+  providerUpcomingEvents=[...managed,...external].filter(e=>eventBroadcastProviders(e).length).slice(0,180);
+  providerUpcomingLoadedAt=Date.now();
+  renderProviders();
+ }catch(error){
+  console.warn("Provider schedule unavailable",error);
+  providerUpcomingLoadedAt=Date.now();
+ }finally{providerUpcomingLoading=false}
+}
 function providerEventCards(){
  const digital=providers.filter(p=>!p.is_base&&String(p.name).toLowerCase()!=="dish").slice(0,6);
  const cflPlusMatches=cflMatchesForPlatform("CFL+");
- // CFL+ is a free public service, not a paid entitlement in the providers table.
- if(cflPlusMatches.length&&!digital.some(p=>/^cfl\+$/i.test(p.name)))
+ if((cflPlusMatches.length||providerEventsForPlatform("CFL+").length)&&!digital.some(p=>/^cfl\+$/i.test(p.name)))
   digital.push({name:"CFL+",tag:"Streaming gratuito internacional",_publicCfl:true});
  if(!digital.length)return '<div class="notice">No hay plataformas digitales habilitadas para esta cuenta.</div>';
  return digital.map(p=>{
-  const name=p.name,isNetflix=/^netflix$/i.test(name);
+  const name=p.name,matches=providerEventsForPlatform(name);
   const cflMatches=cflMatchesForPlatform(name);
-  const found=cflMatches[0]||(isNetflix?netflixUpcomingEvent():null)||
-   sliderEvents.find(e=>demoWhereToWatch(e).some(x=>x.name.toLowerCase()===name.toLowerCase()));
-  const isCfl=!!(found&&cflMatches.length);
-  const status=isCfl?"CFL • EVENTO CONFIRMADO":found?(found._netflixSchedule?"EN NETFLIX":"PRÓXIMO"):"SIN EVENTO CONFIRMADO";
-  const title=found?.strEvent||(isNetflix?"No hay próximas transmisiones confirmadas":"Próximos eventos");
-  const meta=found?providerEventDate(found):"La tarjeta se actualizará cuando haya un evento anunciado.";
-  const matchup=found?matchupVisual(found,true):"";
-  const cflDetails=isCfl?'<p class="small muted">'+(streamPlatform(name)==="CFL+"?"CFL+ • acceso gratuito para público internacional":"DAZN • retransmisión internacional confirmada para esta Grey Cup")+'</p>'+
-   '<a class="google-feed-btn" href="https://cfl.prod.s.cfl.ca/article/where-to-watch-the-113th-grey-cup" target="_blank" rel="noopener noreferrer">Ver fuente oficial CFL ↗</a>':"";
-  const otherCfl=cflMatches.slice(1,4).map(e=>'<p class="small muted">CFL • '+esc(e.strEvent)+' · '+esc(providerEventDate(e))+'</p>').join("");
-  return '<article class="card provider-event searchable" data-search="'+esc((name+" "+(found?.strEvent||"")+" CFL Grey Cup").toLowerCase())+'"><div class="provider-logo">'+esc(name)+'</div>'+matchup+'<div class="provider-bottom"><span class="badge">'+status+'</span><h3>'+esc(title)+'</h3><p class="small muted">'+esc(meta)+'</p>'+cflDetails+otherCfl+'</div></article>';
+  const empty='<div class="provider-slide" data-provider-slide="0"><div class="provider-bottom"><span class="badge">POR CONFIRMAR</span><h3>Sin transmisiones verificadas</h3><p class="small muted">Se mostrarán los eventos cuando la fuente informe la plataforma. Disponibilidad según país.</p></div></div>';
+  const slides=matches.length?matches.map((e,index)=>{
+   const cfl=leagueKey(e)==="CFL"&&cflMatches.some(x=>x.idEvent===e.idEvent);
+   const label=cfl?"CFL • TRANSMISIÓN CONFIRMADA":e._netflixSchedule?"AGENDA NETFLIX":"SEÑAL INFORMADA";
+   const link=cfl?'<a class="google-feed-btn" href="https://www.cfl.ca/" target="_blank" rel="noopener noreferrer">Fuente oficial CFL ↗</a>':"";
+   return '<div class="provider-slide" data-provider-slide="'+index+'" '+(index?'hidden aria-hidden="true"':'aria-hidden="false"')+'>'+
+    matchupVisual(e,true)+'<div class="provider-bottom"><span class="badge">'+esc(label)+'</span>'+
+    '<h3>'+esc(e.strEvent)+'</h3><p class="small muted">'+esc(providerEventDate(e))+'</p>'+
+    '<p class="small muted">'+esc(e.strLeague||e.strSport||"Deportes")+' · Disponibilidad según región</p>'+link+'</div></div>';
+  }).join(""):empty;
+  const controls=matches.length>1?'<div class="provider-carousel-controls">'+
+   '<button type="button" class="provider-carousel-arrow" data-platform-step="-1" aria-label="Evento anterior de '+esc(name)+'">‹</button>'+
+   '<span class="provider-slide-counter" aria-label="Número de evento">1 / '+matches.length+'</span>'+
+   '<button type="button" class="provider-carousel-arrow" data-platform-step="1" aria-label="Siguiente evento de '+esc(name)+'">›</button></div>':
+   '<div class="provider-carousel-controls"><span class="provider-slide-counter">'+(matches.length?'1 / 1':'Sin eventos')+'</span></div>';
+  const search=(name+" "+matches.map(e=>e.strEvent+" "+(e.strLeague||"")).join(" ")).toLowerCase();
+  return '<article class="card provider-event searchable" data-search="'+esc(search)+'" data-platform-carousel="'+esc(name)+'">'+
+   '<div class="provider-logo">'+esc(name)+'</div><div class="provider-slide-stage" aria-label="Eventos de '+esc(name)+'">'+slides+
+   '</div>'+controls+'</article>';
  }).join("");
 }
+function renderProviders(){
+ const target=document.getElementById("providerGrid");
+ if(!target)return;
+ target.innerHTML=providerEventCards();
+ setupProviderCarousels();
+}
 
-function renderProviders(){const x=document.getElementById("providerGrid");if(x)x.innerHTML=providerEventCards()}
 function sportMark(s){const x=(s||"SPORT").toUpperCase();return `<span class="sport-mark">${esc(x==="AMERICAN FOOTBALL"?"NFL":x==="BASKETBALL"?"NBA":x==="BASEBALL"?"MLB":x==="ICE HOCKEY"?"NHL":x==="SOCCER"?"FÚTBOL":x.slice(0,6))}</span>`}
 function channelFilters(){return `<div class="channel-filterbar">${["Todos","Próximos","NBA","NFL","MLB","Fútbol","Tenis"].map(x=>`<button class="channel-filter ${channelFilter===x?"active":""}" data-channel-filter="${x}">${x}</button>`).join("")}</div>`}
 function channelEvent(c){return sliderEvents.find(x=>c.sports.some(s=>{const a=String(x.strSport||"").toLowerCase(),b=s.toLowerCase();return a.includes(b==="fútbol"?"soccer":b==="nfl"?"american football":b==="nba"?"basketball":b==="mlb"?"baseball":b==="nhl"?"ice hockey":b==="tenis"?"tennis":b.split("/")[0])}))}
@@ -1084,6 +1203,7 @@ function setupSlider(){
   window.addEventListener("online",()=>{if(document.getElementById("sportsHero"))loadSportsSlider(true)});
  }
  loadSportsSlider(false);
+ loadProviderUpcomingEvents(false);
 }
 function shuffleDailyEvents(avoidKey=""){
  for(let i=sliderEvents.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sliderEvents[i],sliderEvents[j]]=[sliderEvents[j],sliderEvents[i]]}
