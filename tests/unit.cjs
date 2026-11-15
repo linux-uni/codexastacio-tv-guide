@@ -82,3 +82,39 @@ test("CFL digital platform labels require confirmed broadcast signals",()=>{
  assert.match(html,/Montreal Alouettes vs Edmonton Elks/);
  assert.doesNotMatch(html,/Other CFL match/);
 });
+
+test("Streaming cards rotate independent confirmed events without guessing rights",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf("function cflBroadcastPlatforms(e){"),end=app.indexOf("\nfunction sportMark(s)",start);
+ assert.ok(start>=0&&end>start,"Provider carousel helpers missing");
+ const today={strLeague:"CFL Grey Cup",strEvent:"Montreal vs Edmonton",dateEvent:"2026-11-15",strTVStation:"DAZN, CFL+"};
+ const tomorrow={strLeague:"Boxing",strEvent:"World Championship Boxing",dateEvent:"2026-11-16",strTVStation:"DAZN"};
+ const disney={strLeague:"Sports",strEvent:"Hockey on Disney",dateEvent:"2026-11-15",strTVStation:"Disney+ Premium"};
+ const unverified={strLeague:"Football",strEvent:"Not confirmed",dateEvent:"2026-11-15",_managed:true,_verified:false,_providerName:"DAZN"};
+ const noSignal={strLeague:"Football",strEvent:"No rights information",dateEvent:"2026-11-15"};
+ const ctx=vm.createContext({
+  sliderEvents:[today,noSignal],scheduleEvents:[tomorrow,disney,unverified,today],
+  providers:[{name:"DAZN"},{name:"Disney+"}],
+  dateKey:offset=>{const d=new Date(Date.UTC(2026,10,15+(offset||0)));return d.toISOString().slice(0,10)},
+  sliderLocalDate:e=>e.dateEvent,leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"OTHER",
+  streamPlatform:name=>({dazn:"DAZN","cfl+":"CFL+","disney+":"Disney+","disney+ premium":"Disney+ Premium"})[String(name).toLowerCase()]||"",
+  matchupVisual:()=>"",providerEventDate:e=>e.dateEvent,netflixUpcomingEvent:()=>null,esc:s=>String(s)
+ });
+ vm.runInContext(app.slice(start,end),ctx);
+ assert.equal(ctx.providerEventsForPlatform("DAZN").length,2);
+ assert.equal(ctx.providerEventsForPlatform("Disney+").length,1);
+ assert.equal(ctx.providerEventsForPlatform("CFL+").length,1);
+ assert.deepEqual(Array.from(ctx.eventBroadcastProviders(unverified)),[]);
+ assert.deepEqual(Array.from(ctx.eventBroadcastProviders(noSignal)),[]);
+ assert.equal(ctx.providerSlideIndex(0,-1,2),1);
+ assert.equal(ctx.providerSlideIndex(1,1,2),0);
+ const html=ctx.providerEventCards();
+ const dazn=html.slice(html.indexOf('data-platform-carousel="DAZN"'),html.indexOf('data-platform-carousel="Disney+"'));
+ assert.match(dazn,/data-platform-step="-1"/);
+ assert.match(dazn,/data-platform-step="1"/);
+ assert.match(dazn,/1 \/ 2/);
+ assert.match(dazn,/World Championship Boxing/);
+ assert.match(html,/Hockey on Disney/);
+ assert.doesNotMatch(html,/Not confirmed/);
+ assert.doesNotMatch(html,/No rights information/);
+});
