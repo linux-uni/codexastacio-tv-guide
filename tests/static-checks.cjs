@@ -35,7 +35,7 @@ if(Number(version)<111){
  assert.ok(app.includes('digital.push({name:"CFL+"'),'CFL+ streaming tile missing');
  assert.ok(app.includes('const cflMatches=cflMatchesForPlatform(name)'),'CFL match cards not attached to providers');
  assert.ok(app.includes('if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e)'),'CFL platform assignments must use confirmed signals');
- assert.ok(sw.includes('cfl-platforms-20261115'),'CFL release cache rotation missing');
+ assert.ok(sw.includes('cx-tv-v107-platform-carousels-1'),'Provider carousel cache rotation missing');
  
  assert.ok(app.includes('serviceWorker.register("./sw.js?v='+version+'")'),'Service worker version mismatch');
  console.log('Stable TV Listing v'+version+' checks passed');
