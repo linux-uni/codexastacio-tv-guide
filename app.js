@@ -140,10 +140,11 @@ const OFFICIAL_SCHEDULES={
  NHL:"https://www.nhl.com/schedule",
  MLB:"https://www.mlb.com/schedule",
  NBA:"https://www.nba.com/schedule",
- BOXEO:"https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule"
+ BOXEO:"https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule",
+ CFL:"https://www.cfl.ca/schedule/"
 };
 function officialScheduleLink(e){const k=leagueKey(e);return k?OFFICIAL_SCHEDULES[k]||"":""}
-function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
+function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(/\bcfl\b|grey cup/.test(l))return "CFL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
 
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
@@ -1079,7 +1080,7 @@ function showSlide(step=0){
  slideIndex=(slideIndex+step+sliderEvents.length)%sliderEvents.length;
  if(count)count.textContent=`${slideIndex+1} / ${sliderEvents.length} eventos`;
  const e=sliderEvents[slideIndex],key=leagueKey(e)||e.strSport||"DEPORTE",feed=officialScheduleLink(e),visual=matchupVisual(e,true)||sportArtwork(e,"card");
- const live=eventLive(e),stateLabel=live?"EN VIVO":eventFinished(e)?"FINALIZADO":"PRÓXIMO";
+ const live=eventLive(e),stateLabel=live?"EN VIVO":eventFinished(e)?"FINALIZADO":(e._cflFeatured&&eventStartInstant(e)?.getTime()<=Date.now()?"ESTADO POR CONFIRMAR":"PRÓXIMO");
  hero.className="hero-slide daily-card-stage "+(key?"feed-"+String(key).toLowerCase().replace(/[^a-z0-9]+/g,"-"):"");hero.style.backgroundImage="";
  hero.innerHTML='<article class="daily-event-card"><div class="daily-card-visual">'+visual+'</div><div class="daily-card-body"><div class="daily-card-top"><span class="badge">'+esc(key)+'</span><span class="daily-event-status '+(live?"is-live":"")+'">'+(live?'● ':"")+stateLabel+'</span></div><p class="daily-event-date">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" · ")||"Horario por confirmar")+'</p><h3>'+esc(e.strEvent||e.title||"Evento deportivo")+'</h3><p class="daily-event-league">'+esc(e.strLeague||e.strSport||"")+'</p>'+scoreBadge(e)+watchBadges(e)+reminderActions(e)+(feed?'<a class="google-feed-btn" href="'+esc(feed)+'" target="_blank" rel="noopener noreferrer">Calendario oficial '+esc(key)+' ↗</a>':"")+'</div></article>';
 }
@@ -1093,6 +1094,24 @@ function sliderEventKey(e){
  const league=leagueKey(e)||String(e.strLeague||e.strSport||"").toLowerCase();
  const teams=[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(clean).sort();
  return sliderLocalDate(e)+"|"+league+"|"+(teams.length===2?teams.join("|"):clean(e.strEvent));
+}
+// Official CFL fixture: highlight only on November 15, 2026 (Dominican Republic schedule).
+// Source: CFL, 113th Grey Cup — Montreal vs Edmonton, 6 p.m. ET / 7 p.m. RD.
+function featuredCflGreyCup(today){
+ if(today!=="2026-11-15")return [];
+ return [{
+  idEvent:"cfl-113-grey-cup-2026",
+  strEvent:"Montreal Alouettes vs Edmonton Elks",
+  strHomeTeam:"Montreal Alouettes",
+  strAwayTeam:"Edmonton Elks",
+  strLeague:"CFL • 113ª Grey Cup",
+  strSport:"Canadian Football",
+  dateEvent:"2026-11-15",
+  strTimestamp:"2026-11-15T23:00:00Z",
+  strTime:"07:00 p. m. RD",
+  strTVStation:"DAZN, CFL+",
+  _cflFeatured:true
+ }];
 }
 async function loadSportsSlider(force=false){
  const today=dateKey(0);
@@ -1108,14 +1127,17 @@ async function loadSportsSlider(force=false){
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
   const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
-  const events=[...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const events=[...featuredCflGreyCup(today),...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>{
-    const priority=e=>({"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
+    const priority=e=>({"CFL":-1,"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
     return priority(a)-priority(b)||String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""));
    }).slice(0,48);
   shuffleDailyEvents();
+  // Keep the one-day Grey Cup feature visible as the first slide after each refresh.
+  const cflIndex=sliderEvents.findIndex(e=>e.idEvent==="cfl-113-grey-cup-2026");
+  if(cflIndex>0)[sliderEvents[0],sliderEvents[cflIndex]]=[sliderEvents[cflIndex],sliderEvents[0]];
   slideIndex=0;sliderLoadedDay=today;sliderLastRefresh=Date.now();
   showSlide();renderProviders();dashboardChannelRefresh();renderFavoriteHome();checkTransmissionAnnouncements(sliderEvents);
   if(!sliderTimer)sliderTimer=setInterval(()=>{if(document.getElementById("sportsHero"))showSlide(1)},6500);
@@ -1241,4 +1263,4 @@ function loadSupabase(){
 }
 observeInterfaceLanguage();
 login();loadSupabase();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=108").catch(e=>console.warn("SW:",e)))}
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=107").catch(e=>console.warn("SW:",e)))}
