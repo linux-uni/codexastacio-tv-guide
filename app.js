@@ -1290,14 +1290,77 @@ async function loadSportsSlider(force=false){
 }
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
-async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
+async function openSession(user){
+ currentUser=user;currentProfile=null;
+ try{
+  const {data:profile,error}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);
+  if(error)throw error;
+  if(!profile||profile.status!=="active"){
+   try{await sb.auth.signOut()}catch(error){console.warn("Session sign out",error)}
+   currentUser=null;currentProfile=null;
+   return login(profile?.status==="blocked"?"Tu cuenta está restringida. Contacta al administrador.":"No se pudo validar tu perfil de acceso. Contacta soporte.");
+  }
+  currentProfile=profile;
+ }catch(error){
+  console.warn("Profile lookup:",error);
+  currentUser=null;currentProfile=null;
+  return login("No se pudo verificar el estado de tu cuenta. Intenta de nuevo o contacta soporte.");
+ }
+ try{await loadManagedContent()}catch(error){console.warn("Managed content:",error)}
+ dashboard();
+}
 
+function loginAccessError(error){
+ const message=String(error?.message||"").toLowerCase(),code=String(error?.code||"").toLowerCase();
+ if(code==="invalid_credentials"||/invalid login|incorrect|credenciales.inv.lidas|usuario o contrase.a/.test(message))
+  return "No se pudo validar el usuario o la contraseña. Verifica tus datos o pulsa «Recuperar acceso».";
+ if(/timeout|tiempo de espera|failed to fetch|network|fetch failed|load failed/.test(message))
+  return "No hay conexión con el servicio de acceso. Revisa tu internet, intenta de nuevo o prueba otro navegador.";
+ if(/too many|rate limit|429|limit exceeded/.test(message))
+  return "Demasiados intentos de acceso. Espera unos minutos antes de volver a intentar.";
+ return "No fue posible iniciar sesión. Intenta con tu correo electrónico o utiliza «Recuperar acceso».";
+}
 function login(notice=""){
- app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn">¿Olvidaste tu contraseña?</button></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
+ app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn" aria-expanded="false" aria-controls="recoveryBox">¿Problemas para entrar? Recuperar acceso</button></div><div id="recoveryBox" class="notice hidden" style="margin-top:12px" aria-label="Recuperar acceso"><label for="recoveryEmail"><strong>Recuperar contraseña por correo</strong></label><p class="small muted">Escribe el correo de tu cuenta. No compartas tu contraseña con nadie.</p><input id="recoveryEmail" class="input" type="email" inputmode="email" autocomplete="email" placeholder="Correo electrónico registrado"><button id="sendRecovery" class="btn primary" type="button" style="margin-top:10px;width:100%">Enviar enlace de recuperación</button><button id="recoverSupport" class="link-btn" type="button" style="margin-top:10px">No tengo acceso a mi correo: contactar soporte</button><p id="recoveryMsg" class="small muted" role="status" aria-live="polite"></p></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
  const msg=document.getElementById("msg");msg.className=notice?"danger small":"small muted";msg.textContent=notice|| (sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…");
  document.getElementById("showPw").onchange=e=>{document.getElementById("pw").type=e.target.checked?"text":"password"};
- document.getElementById("forgot").onclick=()=>{const identity=document.getElementById("identity").value.trim()||prompt("Escribe tu usuario o correo electrónico para solicitar ayuda:");if(!identity)return;const message="Hola, Super Admin de CodeXaStacio TV Guide. Solicito restablecer la contraseña de mi cuenta. Usuario o correo: "+identity+". Por favor, verifica mi identidad y ayúdame a recuperar el acceso. No compartiré contraseñas por WhatsApp.";window.open("https://wa.me/18097777117?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");msg.className="small muted";msg.textContent="Se abrió WhatsApp con tu solicitud preparada. Pulsa Enviar para comunicarte con el administrador."};
- document.getElementById("login").onsubmit=async e=>{e.preventDefault();const btn=document.getElementById("loginBtn");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";try{let data=null,error=null;if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));else{const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error}if(error)throw error;const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;if(!user)throw new Error("No se pudo validar la sesión.");msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";await openSession(user)}catch(err){msg.className="danger small";msg.textContent=err?.message||"No fue posible iniciar sesión.";btn.disabled=false;btn.textContent="Entrar"}}
+ document.getElementById("forgot").onclick=()=>{
+  const box=document.getElementById("recoveryBox"),button=document.getElementById("forgot");
+  const show=box.classList.toggle("hidden")===false;
+  button.setAttribute("aria-expanded",String(show));
+  if(show){const email=document.getElementById("recoveryEmail"),identity=document.getElementById("identity").value.trim();
+   if(identity.includes("@"))email.value=identity;
+   email.focus();
+  }
+ };
+ document.getElementById("sendRecovery").onclick=async()=>{
+  const email=document.getElementById("recoveryEmail").value.trim().toLowerCase();
+  const button=document.getElementById("sendRecovery"),feedback=document.getElementById("recoveryMsg");
+  if(!email||!document.getElementById("recoveryEmail").checkValidity()){
+   feedback.className="danger small";feedback.textContent="Escribe una dirección de correo válida.";return;
+  }
+  if(!sb){feedback.className="danger small";feedback.textContent="El servicio de acceso no está disponible. Prueba de nuevo o contacta soporte.";return}
+  button.disabled=true;button.textContent="Enviando solicitud…";
+  try{
+   const redirectTo=location.origin+location.pathname+"?recovery=1";
+   const {error}=await withTimeout(sb.auth.resetPasswordForEmail(email,{redirectTo}),12000);
+   if(error)throw error;
+   feedback.className="ok small";
+   feedback.textContent="Si este correo pertenece a una cuenta registrada, recibirás instrucciones. Revisa también Spam. El enlace te permitirá crear una contraseña nueva.";
+  }catch(error){
+   feedback.className="danger small";
+   const details=String(error?.message||"").toLowerCase();
+   feedback.textContent=/rate limit|too many|429|limit exceeded/.test(details)
+    ?"Se han enviado demasiadas solicitudes. Espera unos minutos y vuelve a intentar."
+    :"No fue posible solicitar la recuperación por correo. Contacta soporte si el problema continúa.";
+  }finally{button.disabled=false;button.textContent="Enviar enlace de recuperación";}
+ };
+ document.getElementById("recoverSupport").onclick=()=>{
+  const identity=document.getElementById("identity").value.trim()||document.getElementById("recoveryEmail").value.trim();
+  const message="Hola, soporte de CodeXaStacio TV Guide. No puedo acceder a mi cuenta"+(identity?". Usuario o correo: "+identity:"")+". Solicito ayuda para recuperar el acceso. No enviaré contraseñas.";
+  window.open("https://wa.me/18097777117?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
+ };
+ document.getElementById("login").onsubmit=async e=>{e.preventDefault();const btn=document.getElementById("loginBtn");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";try{let data=null,error=null;if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));else{const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error}if(error)throw error;const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;if(!user)throw new Error("No se pudo validar la sesión.");msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";await openSession(user)}catch(err){msg.className="danger small";msg.textContent=loginAccessError(err);btn.disabled=false;btn.textContent="Entrar"}}
 }
 
 async function logout(){if(sliderTimer)clearInterval(sliderTimer);if(sb)await sb.auth.signOut();currentUser=null;currentProfile=null;login()}
@@ -1398,13 +1461,64 @@ function bindAdminUsers(){document.querySelectorAll("[data-password-user]").forE
 function adminPanel(){adminControlCenter()}
 
 function loadSupabase(){
- const s=document.createElement("script");
- s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js";
- s.async=true;
- s.onload=async()=>{try{if(!window.supabase?.createClient)throw new Error("Cliente de cuenta no disponible");sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});sb.auth.onAuthStateChange((event)=>{if(event==="PASSWORD_RECOVERY")setTimeout(passwordRecovery,0);if(event==="SIGNED_OUT"){currentUser=null;currentProfile=null}});const {data,error}=await withTimeout(sb.auth.getSession(),8000);if(error)throw error;const user=data?.session?.user||null;if(new URLSearchParams(location.search).get("recovery")==="1"&&user)return passwordRecovery();if(user)await openSession(user);else login()}catch(e){console.error("Auth bootstrap:",e);login("No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente.")}};
- s.onerror=()=>login("No se pudo cargar el servicio de acceso.");
- document.head.appendChild(s);
+ // Backup CDN for browsers or networks blocking the primary script host.
+ const sources=[
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js",
+  "https://unpkg.com/@supabase/supabase-js@2.95.0/dist/umd/supabase.js"
+ ];
+ let attempted=0,ready=false;
+ const displayProblem=message=>{
+  const msg=document.getElementById("msg");
+  if(msg){msg.className="danger small";msg.textContent=message;}
+  else if(!document.getElementById("login"))login(message);
+ };
+ async function initialize(){
+  if(ready)return;
+  if(!window.supabase?.createClient)throw new Error("El cliente de cuenta no se cargó.");
+  ready=true;
+  sb=window.supabase.createClient(CFG.url,CFG.key,{
+   auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+  });
+  let recoveryEvent=false;
+  sb.auth.onAuthStateChange(event=>{
+   if(event==="PASSWORD_RECOVERY"){recoveryEvent=true;setTimeout(passwordRecovery,0);}
+   if(event==="SIGNED_OUT"){currentUser=null;currentProfile=null;}
+  });
+  try{
+   const {data,error}=await withTimeout(sb.auth.getSession(),8000);
+   if(error)throw error;
+   const user=data?.session?.user||null;
+   if(user&&(recoveryEvent||new URLSearchParams(location.search).get("recovery")==="1"))return passwordRecovery();
+   if(user)return openSession(user);
+   const msg=document.getElementById("msg");
+   // Preserve user input if the SDK finishes loading while they are typing.
+   if(msg&&!msg.classList.contains("danger"))msg.textContent="Servicio de cuenta conectado. Introduce tus datos para entrar.";
+   else if(!document.getElementById("login"))login();
+  }catch(error){
+   console.warn("Auth bootstrap unavailable",error);
+   displayProblem("No se pudo restaurar la sesión. Prueba iniciar sesión nuevamente o utiliza «Recuperar acceso».");
+  }
+ }
+ function nextSource(){
+  if(ready)return;
+  if(attempted>=sources.length){
+   displayProblem("No se pudo cargar el servicio de acceso. Recarga la página o prueba otro navegador.");
+   return;
+  }
+  const script=document.createElement("script");
+  script.src=sources[attempted++];
+  script.async=true;
+  let settled=false;
+  const timeout=setTimeout(()=>{if(settled)return;settled=true;script.onload=null;script.onerror=null;script.remove();nextSource();},10000);
+  script.onload=()=>{if(settled)return;settled=true;clearTimeout(timeout);initialize().catch(error=>{
+   console.warn("Supabase initialization",error);displayProblem("No se pudo iniciar el servicio de acceso. Recarga la página.");
+  })};
+  script.onerror=()=>{if(settled)return;settled=true;clearTimeout(timeout);script.remove();nextSource();};
+  document.head.appendChild(script);
+ }
+ nextSource();
 }
+
 observeInterfaceLanguage();
 login();loadSupabase();
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=107").catch(e=>console.warn("SW:",e)))}

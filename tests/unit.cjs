@@ -118,3 +118,19 @@ test("Streaming cards rotate independent confirmed events without guessing right
  assert.doesNotMatch(html,/Not confirmed/);
  assert.doesNotMatch(html,/No rights information/);
 });
+
+test("User login messages are safe and password recovery is user-triggered",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf("function loginAccessError(error){"),end=app.indexOf("\nfunction login(notice",start);
+ assert.ok(start>=0&&end>start,"Friendly auth error mapping missing");
+ const ctx=vm.createContext({});
+ vm.runInContext(app.slice(start,end),ctx);
+ assert.match(ctx.loginAccessError({code:"invalid_credentials",message:"Invalid login credentials"}),/Recuperar acceso/);
+ assert.match(ctx.loginAccessError({message:"Failed to fetch"}),/conexión/);
+ assert.doesNotMatch(ctx.loginAccessError({message:"internal secret debug value"}),/secret debug value/);
+ assert.ok(app.includes('document.getElementById("sendRecovery").onclick=async()=>'),'Recovery must be user-triggered');
+ assert.ok(app.includes('sb.auth.resetPasswordForEmail(email,{redirectTo})'),'Native Supabase reset flow missing');
+ assert.ok(app.includes('document.getElementById("recoveryEmail").checkValidity()'),'Reset email validation missing');
+ assert.ok(app.includes('recoveryEvent=true;setTimeout(passwordRecovery,0)'),'Recovery callback missing');
+ assert.ok(app.includes('const sources=[')&&app.includes("unpkg.com"),'Backup CDN load missing');
+});
