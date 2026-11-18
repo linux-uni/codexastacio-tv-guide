@@ -40,6 +40,7 @@ if(Number(version)<111){
  assert.ok(sw.includes('app.js?v=107&auth=1'),'Login recovery code is not cached');
  assert.ok(app.includes('resetPasswordForEmail(email,{redirectTo})'),'Supabase password self-service missing');
  assert.ok(app.includes('function loginAccessError(error)'),'Friendly login errors missing');
+ assert.ok(app.includes('if(!profile||profile.status!=="active")'),'Inactive or missing profiles must not gain access');
  assert.ok(app.includes('https://unpkg.com/@supabase/supabase-js@2.95.0/'),'Backup auth script host missing');
  assert.ok(app.includes('if(msg&&!msg.classList.contains("danger"))'),'Login form preservation missing');
  
