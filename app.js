@@ -1290,7 +1290,25 @@ async function loadSportsSlider(force=false){
 }
 function dashboardChannelRefresh(){const grids=document.querySelectorAll(".channel-showcase");if(!grids.length)return;const filtered=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));grids.forEach(g=>g.outerHTML=channelCards(filtered))}
 function withTimeout(p,ms=12000){return Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Tiempo de espera agotado. Intenta nuevamente.")),ms))])}
-async function openSession(user){currentUser=user;try{const {data:p}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);currentProfile=p||null;if(p?.status==="blocked"){await sb.auth.signOut();currentUser=null;currentProfile=null;return login("Tu cuenta está restringida. Contacta al administrador.")}}catch(e){console.warn("Profile lookup:",e)}try{await loadManagedContent()}catch(e){console.warn("Managed content:",e)}dashboard()}
+async function openSession(user){
+ currentUser=user;currentProfile=null;
+ try{
+  const {data:profile,error}=await withTimeout(sb.from("profiles").select("role,status,full_name,username,email,phone,can_search,can_view_schedule,can_view_channels,can_view_leagues,can_view_providers").eq("id",user.id).maybeSingle(),7000);
+  if(error)throw error;
+  if(!profile||profile.status!=="active"){
+   try{await sb.auth.signOut()}catch(error){console.warn("Session sign out",error)}
+   currentUser=null;currentProfile=null;
+   return login(profile?.status==="blocked"?"Tu cuenta está restringida. Contacta al administrador.":"No se pudo validar tu perfil de acceso. Contacta soporte.");
+  }
+  currentProfile=profile;
+ }catch(error){
+  console.warn("Profile lookup:",error);
+  currentUser=null;currentProfile=null;
+  return login("No se pudo verificar el estado de tu cuenta. Intenta de nuevo o contacta soporte.");
+ }
+ try{await loadManagedContent()}catch(error){console.warn("Managed content:",error)}
+ dashboard();
+}
 
 function loginAccessError(error){
  const message=String(error?.message||"").toLowerCase(),code=String(error?.code||"").toLowerCase();
