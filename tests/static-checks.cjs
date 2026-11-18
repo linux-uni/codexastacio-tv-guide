@@ -25,8 +25,8 @@ if(Number(version)<111){
  assert.ok(app.includes('Reintentar actualización'),'Feed retry missing');
  assert.ok(html.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from HTML');
  assert.ok(sw.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from offline cache');
- assert.ok(html.includes('app.js?v=107&cards=1'),'Provider carousel app cache-bust missing');
- assert.ok(sw.includes('app.js?v=107&cards=1'),'Provider carousel app asset missing from cache');
+ assert.ok(html.includes('app.js?v=107&auth=1'),'Provider carousel app cache-bust missing');
+ assert.ok(sw.includes('app.js?v=107&auth=1'),'Provider carousel app asset missing from cache');
  assert.ok(app.includes('function providerEventsForPlatform(name)'),'Provider event selection missing');
  assert.ok(app.includes('function changeProviderSlide(card,step)'),'Independent provider controls missing');
  assert.ok(app.includes('function loadProviderUpcomingEvents(force=false)'),'Upcoming verified events loader missing');
@@ -35,7 +35,13 @@ if(Number(version)<111){
  assert.ok(app.includes('digital.push({name:"CFL+"'),'CFL+ streaming tile missing');
  assert.ok(app.includes('const cflMatches=cflMatchesForPlatform(name)'),'CFL match cards not attached to providers');
  assert.ok(app.includes('if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e)'),'CFL platform assignments must use confirmed signals');
- assert.ok(sw.includes('cx-tv-v107-platform-carousels-1'),'Provider carousel cache rotation missing');
+ assert.ok(sw.includes('cx-tv-v107-auth-recovery-1'),'Account recovery cache rotation missing');
+ assert.ok(html.includes('app.js?v=107&auth=1'),'Login recovery code is not referenced by page');
+ assert.ok(sw.includes('app.js?v=107&auth=1'),'Login recovery code is not cached');
+ assert.ok(app.includes('resetPasswordForEmail(email,{redirectTo})'),'Supabase password self-service missing');
+ assert.ok(app.includes('function loginAccessError(error)'),'Friendly login errors missing');
+ assert.ok(app.includes('https://unpkg.com/@supabase/supabase-js@2.95.0/'),'Backup auth script host missing');
+ assert.ok(app.includes('if(msg&&!msg.classList.contains("danger"))'),'Login form preservation missing');
  
  assert.ok(app.includes('serviceWorker.register("./sw.js?v='+version+'")'),'Service worker version mismatch');
  console.log('Stable TV Listing v'+version+' checks passed');
