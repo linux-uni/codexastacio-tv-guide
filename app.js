@@ -1421,6 +1421,34 @@ async function openSession(user){
  dashboard();
 }
 
+// Remember an identifier only; passwords stay exclusively with the browser's
+// password manager. Supabase manages the renewable sign-in session separately.
+const REMEMBERED_LOGIN_KEY="cx-tv-remembered-username-v1";
+function readRememberedLogin(){
+ try{const saved=localStorage.getItem(REMEMBERED_LOGIN_KEY)||"";
+  return saved.length<=254?saved:"";
+ }catch{return ""}
+}
+function rememberLoginIdentifier(identity,enabled){
+ try{
+  if(enabled&&identity&&identity.length<=254)localStorage.setItem(REMEMBERED_LOGIN_KEY,identity);
+  else localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+ }catch(error){console.warn("No se pudo recordar el usuario",error)}
+}
+async function offerBrowserPasswordSave(identity,password){
+ // Chrome-derived browsers can optionally offer to save the credential
+ // following a verified sign-in. Other browsers use native form autofill.
+ if(!identity||!password||typeof window.PasswordCredential!=="function"||!navigator.credentials?.store)return false;
+ try{
+  const credential=new window.PasswordCredential({id:identity,password,name:"CodeXaStacio TV Guide"});
+  await navigator.credentials.store(credential);
+  return true;
+ }catch(error){
+  // Refusal or unsupported managers must never prevent sign-in.
+  console.warn("Password manager did not save a credential",error);
+  return false;
+ }
+}
 function loginAccessError(error){
  const message=String(error?.message||"").toLowerCase(),code=String(error?.code||"").toLowerCase();
  if(code==="invalid_credentials"||/invalid login|incorrect|credenciales.inv.lidas|usuario o contrase.a/.test(message))
@@ -1432,8 +1460,11 @@ function loginAccessError(error){
  return "No fue posible iniciar sesión. Intenta con tu correo electrónico o utiliza «Recuperar acceso».";
 }
 function login(notice=""){
- app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login"><input id="identity" class="input" placeholder="Usuario o correo" autocomplete="username" required><br><br><input id="pw" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><br><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn" aria-expanded="false" aria-controls="recoveryBox">¿Problemas para entrar? Recuperar acceso</button></div><div id="recoveryBox" class="notice hidden" style="margin-top:12px" aria-label="Recuperar acceso"><label for="recoveryEmail"><strong>Recuperar contraseña por correo</strong></label><p class="small muted">Escribe el correo de tu cuenta. No compartas tu contraseña con nadie.</p><input id="recoveryEmail" class="input" type="email" inputmode="email" autocomplete="email" placeholder="Correo electrónico registrado"><button id="sendRecovery" class="btn primary" type="button" style="margin-top:10px;width:100%">Enviar enlace de recuperación</button><button id="recoverSupport" class="link-btn" type="button" style="margin-top:10px">No tengo acceso a mi correo: contactar soporte</button><p id="recoveryMsg" class="small muted" role="status" aria-live="polite"></p></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
+ app.innerHTML='<main class="wrap"><section class="panel login"><div class="login-hero"><div class="cx-emblem">CX</div><div class="cx-login-title">Code<span>X</span>aStacio</div><div class="cx-login-sub">TV GUIDE</div><div class="cx-login-tags">SPORTS • MOVIES • SERIES • LIVE TV</div></div>'+languageToggleButton()+'<h2>Bienvenido</h2><p class="muted">Inicia sesión para continuar</p><form id="login" autocomplete="on"><label for="identity" class="sr-only">Usuario o correo electrónico</label><input id="identity" name="username" class="input" type="text" placeholder="Usuario o correo" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" required><br><br><label for="pw" class="sr-only">Contraseña</label><input id="pw" name="password" class="input" type="password" placeholder="Contraseña" autocomplete="current-password" required><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:9px"><input id="showPw" type="checkbox"> Mostrar contraseña</label><label class="small muted" style="display:flex;align-items:center;gap:8px;margin-top:14px"><input id="rememberIdentity" type="checkbox"> Recordar mi usuario en este dispositivo</label><p class="small muted" style="margin:7px 0 14px">Si el navegador te ofrece guardar la contraseña, puedes aceptarlo. La aplicación no guarda contraseñas.</p><button id="loginBtn" class="btn primary" style="width:100%">Entrar</button></form><div class="login-actions"><button id="forgot" type="button" class="link-btn" aria-expanded="false" aria-controls="recoveryBox">¿Problemas para entrar? Recuperar acceso</button></div><div id="recoveryBox" class="notice hidden" style="margin-top:12px" aria-label="Recuperar acceso"><label for="recoveryEmail"><strong>Recuperar contraseña por correo</strong></label><p class="small muted">Escribe el correo de tu cuenta. No compartas tu contraseña con nadie.</p><input id="recoveryEmail" class="input" type="email" inputmode="email" autocomplete="email" placeholder="Correo electrónico registrado"><button id="sendRecovery" class="btn primary" type="button" style="margin-top:10px;width:100%">Enviar enlace de recuperación</button><button id="recoverSupport" class="link-btn" type="button" style="margin-top:10px">No tengo acceso a mi correo: contactar soporte</button><p id="recoveryMsg" class="small muted" role="status" aria-live="polite"></p></div><div id="msg" class="small muted" style="margin-top:12px"></div></section></main>';
  const msg=document.getElementById("msg");msg.className=notice?"danger small":"small muted";msg.textContent=notice|| (sb?"Servicio de cuenta conectado.":"Conectando servicio de cuenta…");
+ const remembered=readRememberedLogin();
+ if(remembered){document.getElementById("identity").value=remembered;document.getElementById("rememberIdentity").checked=true}
+ document.getElementById("rememberIdentity").onchange=e=>{if(!e.target.checked)rememberLoginIdentifier("",false)};
  document.getElementById("showPw").onchange=e=>{document.getElementById("pw").type=e.target.checked?"text":"password"};
  document.getElementById("forgot").onclick=()=>{
   const box=document.getElementById("recoveryBox"),button=document.getElementById("forgot");
@@ -1471,7 +1502,7 @@ function login(notice=""){
   const message="Hola, soporte de CodeXaStacio TV Guide. No puedo acceder a mi cuenta"+(identity?". Usuario o correo: "+identity:"")+". Solicito ayuda para recuperar el acceso. No enviaré contraseñas.";
   window.open("https://wa.me/18097777117?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
  };
- document.getElementById("login").onsubmit=async e=>{e.preventDefault();const btn=document.getElementById("loginBtn");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value;btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";try{let data=null,error=null;if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));else{const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error}if(error)throw error;const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;if(!user)throw new Error("No se pudo validar la sesión.");msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";await openSession(user)}catch(err){msg.className="danger small";msg.textContent=loginAccessError(err);btn.disabled=false;btn.textContent="Entrar"}}
+ document.getElementById("login").onsubmit=async e=>{e.preventDefault();const btn=document.getElementById("loginBtn");if(!sb){msg.className="danger small";msg.textContent="El servicio de cuenta todavía está conectando. Intenta de nuevo en unos segundos.";return}const identity=document.getElementById("identity").value.trim(),password=document.getElementById("pw").value,remember=!!document.getElementById("rememberIdentity").checked;btn.disabled=true;btn.textContent="Entrando…";msg.className="small muted";msg.textContent="Verificando credenciales…";try{let data=null,error=null;if(identity.includes("@"))({data,error}=await withTimeout(sb.auth.signInWithPassword({email:identity,password})));else{const r=await withTimeout(fetch(CFG.url+"/functions/v1/username-login",{method:"POST",headers:{"Content-Type":"application/json","apikey":CFG.key},body:JSON.stringify({username:identity,password})}));const j=await r.json();if(!r.ok)throw new Error(j.error||"Usuario o contraseña incorrectos");const res=await withTimeout(sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token}));data=res.data;error=res.error}if(error)throw error;const user=data?.user||data?.session?.user||(await withTimeout(sb.auth.getUser(),7000)).data?.user;if(!user)throw new Error("No se pudo validar la sesión.");msg.className="ok small";msg.textContent="Acceso correcto. Abriendo guía…";await openSession(user);if(currentProfile?.status==="active"&&currentUser?.id===user.id){rememberLoginIdentifier(identity,remember);if(remember)void offerBrowserPasswordSave(identity,password)}}catch(err){msg.className="danger small";msg.textContent=loginAccessError(err);btn.disabled=false;btn.textContent="Entrar"}}
 }
 
 async function logout(){if(sliderTimer)clearInterval(sliderTimer);if(sb)await sb.auth.signOut();currentUser=null;currentProfile=null;login()}
