@@ -583,6 +583,7 @@ function scheduleFilterControls(){
 }
 function scheduleMatchesFilters(e){
  if(!(state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return false;
+ if(state.sport===COMBAT_CATEGORY&&combatFilter!=="Todos"&&combatCategory(e)!==combatFilter)return false;
  if(scheduleFilters.favoritesOnly&&!isFavoriteMatch(e))return false;
  if(scheduleFilters.league&&String(e.strLeague||"")!==scheduleFilters.league)return false;
  if(scheduleFilters.team&&![e.strHomeTeam,e.strAwayTeam].includes(scheduleFilters.team))return false;
@@ -591,6 +592,7 @@ function scheduleMatchesFilters(e){
 }
 function renderScheduleDynamic(){const node=document.getElementById("scheduleDynamic");if(!node)return;node.innerHTML=scheduleCards();bindScheduleFilterControls()}
 function bindScheduleFilterControls(){
+ document.querySelectorAll("[data-combat-filter]").forEach(button=>button.onclick=()=>{combatFilter=button.dataset.combatFilter;renderScheduleDynamic()});
  document.querySelectorAll("[data-schedule-filter]").forEach(x=>x.onchange=()=>{scheduleFilters[x.dataset.scheduleFilter]=x.value;renderScheduleDynamic()});
  const fav=document.getElementById("favoriteOnlyToggle");if(fav)fav.onclick=()=>{scheduleFilters.favoritesOnly=!scheduleFilters.favoritesOnly;renderScheduleDynamic()};
  const alerts=document.getElementById("transmissionAlertToggle");if(alerts)alerts.onclick=toggleTransmissionAlerts;
@@ -918,11 +920,18 @@ function downloadReminderCalendar(record){
  a.href=url;a.download=(record.title||"partido").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".ics";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  showReminderToast("Calendario descargado con aviso 5 minutos antes. Ábrelo para guardarlo.");
 }
+function combatFilterControls(){
+ if(state.sport!==COMBAT_CATEGORY)return "";
+ const options=[["Todos","Todos"],["BOXEO","Boxeo"],["UFC","UFC"],["MMA","MMA"],["BARE KNUCKLE","BKFC / BKB"]];
+ return '<nav class="combat-filter-tabs" aria-label="Tipos de deportes de combate">'+options.map(([key,label])=>
+  '<button type="button" data-combat-filter="'+key+'" class="combat-filter-chip'+(combatFilter===key?" active":"")+'" aria-pressed="'+(combatFilter===key)+'">'+label+'</button>'
+ ).join("")+'</nav>';
+}
 function scheduleCards(){
- const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
+ const intro=combatFilterControls()+footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
  const rows=scheduleEvents.filter(scheduleMatchesFilters);
  if(!rows.length)return intro+controls+'<div class="notice">'+(scheduleFilters.favoritesOnly&&!favoriteTeams().length?'Agrega equipos favoritos desde los botones ☆ de cada partido. ':state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':state.sport==="MLB"&&mlbFeedFailed?'No se pudo consultar el calendario MLB. Reintenta o consulta MLB.com. ':state.sport==="MLB"?'No hay partidos MLB programados en este período. Fuera de temporada es normal que no haya encuentros. ':'No hay partidos que coincidan con estos filtros. ')+(scheduleFilters.favoritesOnly?'Desactiva “Solo favoritos” o sigue equipos desde sus partidos.':'Prueba otro período o cambia los filtros.')+'</div>';
- return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
+ return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-combat-type="'+esc(combatCategory(e))+'" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):e._combatOfficial?" • Cartelera del organizador":"")+'</div>'+(e._combatOfficial?'<div class="combat-official-info">Horario y disponibilidad de transmisión por confirmar</div>':"")+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
 }
 
 const BOXING_SCHEDULE_URL="https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule";
@@ -1221,7 +1230,7 @@ function bind(){
    if(state.sport==="Fútbol")footballLeague="Todas";
    if(canView("schedule")){
     state.view="schedule";
-    if(state.sport==="Champions League"||state.sport==="Boxeo")scheduleRange="month";
+    if(state.sport==="Champions League"||state.sport==="Boxeo"||state.sport===COMBAT_CATEGORY||state.sport==="BKFC/BKB")scheduleRange="month";
     else if(!wasSchedule)scheduleRange=state.sport==="Todos"?"week":"month";
    }
    dashboard();
