@@ -35,11 +35,15 @@ if(Number(version)<111){
  assert.ok(app.includes('digital.push({name:"CFL+"'),'CFL+ streaming tile missing');
  assert.ok(app.includes('const cflMatches=cflMatchesForPlatform(name)'),'CFL match cards not attached to providers');
  assert.ok(app.includes('if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e)'),'CFL platform assignments must use confirmed signals');
- assert.ok(sw.includes('cx-tv-v107-auth-recovery-1'),'Account recovery cache rotation missing');
- assert.ok(html.includes('app.js?v=107&auth=1'),'Login recovery code is not referenced by page');
- assert.ok(sw.includes('app.js?v=107&auth=1'),'Login recovery code is not cached');
+ assert.ok(sw.includes('cx-tv-v107-nhl-20261118-2'),'NHL update cache rotation missing');
+ assert.ok(html.includes('app.js?v=107&nhl=2'),'NHL app version is not referenced by page');
+ assert.ok(sw.includes('app.js?v=107&nhl=2'),'NHL app version is not cached');
  assert.ok(app.includes('resetPasswordForEmail(email,{redirectTo})'),'Supabase password self-service missing');
  assert.ok(app.includes('function loginAccessError(error)'),'Friendly login errors missing');
+ assert.ok(app.includes('function nhlOfficialEvent(game)'),'Official NHL parser missing');
+ assert.ok(app.includes('function mergeNhlEvents(official,espn)'),'NHL duplicate suppression missing');
+ assert.ok(app.includes('function nhlScheduleGames(payload)'),'NHL weekly schedule parser missing');
+ assert.ok(app.includes('const generalWithoutNhl=nhl.length?general.filter'),'NHL official games not prioritized on slider');
  assert.ok(app.includes('if(!profile||profile.status!=="active")'),'Inactive or missing profiles must not gain access');
  assert.ok(app.includes('https://unpkg.com/@supabase/supabase-js@2.95.0/'),'Backup auth script host missing');
  assert.ok(app.includes('if(msg&&!msg.classList.contains("danger"))'),'Login form preservation missing');
