@@ -134,3 +134,52 @@ test("User login messages are safe and password recovery is user-triggered",()=>
  assert.ok(app.includes('recoveryEvent=true;setTimeout(passwordRecovery,0)'),'Recovery callback missing');
  assert.ok(app.includes('const sources=[')&&app.includes("unpkg.com"),'Backup CDN load missing');
 });
+
+test("NHL official fixtures use Dominican time, scores and avoid duplicate ESPN entries",async()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const first=app.indexOf("function nhlOfficialEvent(game){"),last=app.indexOf("\nconst REMINDER_STORAGE_PREFIX=",first);
+ assert.ok(first>=0&&last>first,"NHL official source helpers missing");
+ const games=[
+  {id:1,gameDate:"2026-11-18",startTimeUTC:"2026-11-19T00:30:00Z",gameState:"PRE",awayTeam:{placeName:{default:"Boston"},commonName:{default:"Bruins"},abbrev:"BOS"},homeTeam:{placeName:{default:"Detroit"},commonName:{default:"Red Wings"},abbrev:"DET"},tvBroadcasts:[{network:"TNT"}]},
+  {id:2,gameDate:"2026-11-18",startTimeUTC:"2026-11-19T00:30:00Z",gameState:"LIVE",periodDescriptor:{number:2},awayTeam:{placeName:{default:"Montreal"},commonName:{default:"Canadiens"},score:2},homeTeam:{placeName:{default:"New Jersey"},commonName:{default:"Devils"},score:3}},
+  {id:3,gameDate:"2026-11-18",startTimeUTC:"2026-11-19T03:00:00Z",gameState:"OFF",awayTeam:{placeName:{default:"Colorado"},commonName:{default:"Avalanche"},score:4},homeTeam:{placeName:{default:"Utah"},commonName:{default:"Mammoth"},score:5}}
+ ];
+ const extra={idEvent:"espn-1",strEvent:"Boston Bruins vs Detroit Red Wings",strHomeTeam:"Detroit Red Wings",strAwayTeam:"Boston Bruins",dateEvent:"2026-11-18",strTimestamp:"2026-11-19T00:30:00Z",strLeague:"NHL"};
+ const dateKey=n=>new Date(Date.UTC(2026,10,18+(n||0))).toISOString().slice(0,10);
+ const rdDateKey=d=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+ const ctx=vm.createContext({Date,Intl,AbortSignal,console:{warn(){}},dateKey,rdDateKey,sliderLocalDate:e=>e.dateEvent,
+   espnGames:async()=>[extra],fetch:async()=>({ok:true,json:async()=>({games})})});
+ vm.runInContext(app.slice(first,last),ctx);
+ const rows=Array.from(await ctx.nhlGames([0]));
+ assert.equal(rows.length,3,"The same game cannot appear twice");
+ assert.ok(rows.every(x=>x._nhlOfficial));
+ const detroit=rows.find(x=>x.idEvent==="nhl-1");
+ assert.equal(detroit.dateEvent,"2026-11-18");
+ assert.match(detroit.strTime,/08:30|8:30/);
+ assert.equal(detroit.strTVStation,"TNT");
+ const devils=rows.find(x=>x.idEvent==="nhl-2");
+ assert.equal(devils.strStatus,"LIVE");
+ assert.equal(devils.intHomeScore,3);
+ assert.equal(devils.strProgress,"P2");
+ const utah=rows.find(x=>x.idEvent==="nhl-3");
+ assert.equal(utah.strStatus,"FINAL");
+ assert.equal(utah.intAwayScore,4);
+});
+test("NHL weekly API handles month calendars and ESPN backup",async()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const first=app.indexOf("function nhlOfficialEvent(game){"),last=app.indexOf("\nconst REMINDER_STORAGE_PREFIX=",first);
+ const event={idEvent:"espn-fallback",strEvent:"Boston Bruins vs Detroit Red Wings",strHomeTeam:"Detroit Red Wings",strAwayTeam:"Boston Bruins",dateEvent:"2026-11-18",strTimestamp:"2026-11-19T00:30:00Z",strLeague:"NHL"};
+ const dateKey=n=>new Date(Date.UTC(2026,10,18+(n||0))).toISOString().slice(0,10);
+ const rdDateKey=d=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Santo_Domingo",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+ let fetches=[];
+ const ctx=vm.createContext({Date,Intl,AbortSignal,console:{warn(){}},dateKey,rdDateKey,sliderLocalDate:e=>e.dateEvent,
+  espnGames:async()=>[event],
+  fetch:async url=>{fetches.push(url);return {ok:true,json:async()=>({gameWeek:[]})}}});
+ vm.runInContext(app.slice(first,last),ctx);
+ const dates=Array.from({length:30},(_,i)=>i);
+ const rows=Array.from(await ctx.nhlGames(dates));
+ assert.equal(rows.length,1,"ESPN must still load when the official feed is empty");
+ assert.ok(fetches.some(u=>u.includes("/v1/schedule/")));
+ assert.ok(fetches.some(u=>u.includes("/v1/score/2026-11-18")));
+ assert.ok(fetches.length<=6,"30 days should require no more than six official NHL requests");
+});
