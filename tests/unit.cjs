@@ -244,3 +244,39 @@ test("MMA/boxing feed merger de-duplicates repeated fights by date and fighters"
  assert.equal(fights.filter(e=>e.strEvent===sample.strEvent).length,1);
  assert.equal(fights.filter(e=>e.strEvent===other.strEvent).length,1);
 });
+
+test("Remembered login stores only identifier and honors opt-out",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf('const REMEMBERED_LOGIN_KEY=');
+ const end=app.indexOf('\nfunction loginAccessError(error)',start);
+ assert.ok(start>=0&&end>start,"Remembered login helpers missing");
+ const data=new Map(),calls=[];
+ const storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>{data.set(k,v);calls.push([k,v])},removeItem:k=>data.delete(k)};
+ const ctx=vm.createContext({localStorage:storage,window:{},navigator:{},console:{warn(){}},Promise});
+ vm.runInContext(app.slice(start,end),ctx);
+ assert.equal(ctx.readRememberedLogin(),"");
+ ctx.rememberLoginIdentifier("user@example.com",true);
+ assert.equal(ctx.readRememberedLogin(),"user@example.com");
+ assert.deepEqual(calls,[["cx-tv-remembered-username-v1","user@example.com"]]);
+ ctx.rememberLoginIdentifier("",false);
+ assert.equal(ctx.readRememberedLogin(),"");
+ assert.equal(await ctx.offerBrowserPasswordSave("user@example.com","topsecret"),false);
+ assert.ok(![...data.values()].includes("topsecret"));
+});
+test("Browser-managed credential save is opt-in, never stored in localStorage",async()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf('const REMEMBERED_LOGIN_KEY=');
+ const end=app.indexOf('\nfunction loginAccessError(error)',start);
+ const saved=[];
+ class FakePasswordCredential{constructor(input){this.id=input.id;this.password=input.password;this.name=input.name}}
+ const storage={getItem:()=>null,setItem:()=>{throw Error("Credential must not be written to web storage")},removeItem:()=>{}};
+ const ctx=vm.createContext({window:{PasswordCredential:FakePasswordCredential},navigator:{credentials:{store:async c=>saved.push(c)}},localStorage:storage,console:{warn(){}},Promise});
+ vm.runInContext(app.slice(start,end),ctx);
+ assert.equal(await ctx.offerBrowserPasswordSave("test@example.com","secret-example"),true);
+ assert.equal(saved.length,1);
+ assert.equal(saved[0].id,"test@example.com");
+ assert.equal(saved[0].password,"secret-example");
+ assert.equal(saved[0].name,"CodeXaStacio TV Guide");
+ assert.ok(app.includes('if(remember)void offerBrowserPasswordSave(identity,password)'),"Credential save must require consent");
+ assert.ok(app.includes('autocomplete="username"')&&app.includes('autocomplete="current-password"'),"Browser autofill expected");
+});
