@@ -188,7 +188,7 @@ test("Combat classification keeps Boxing, UFC, MMA and BKFC/BKB separate",()=>{
  const app=fs.readFileSync("app.js","utf8");
  const start=app.indexOf("function combatCategory(e){"),end=app.indexOf("\nfunction teamLogo(e,side)",start);
  assert.ok(start>=0&&end>start,"Combat classification missing");
- const context=vm.createContext({isChampionsLeague:()=>false});
+ const context=vm.createContext({isChampionsLeague:()=>false,COMBAT_CATEGORY:"Boxeo / UFC-MMA"});
  vm.runInContext(app.slice(start,end),context);
  const as=(league,sport)=>({strLeague:league,strSport:sport,strEvent:"Test fight"});
  assert.equal(context.combatCategory(as("Boxeo profesional","Boxing")),"BOXEO");
