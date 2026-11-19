@@ -25,8 +25,8 @@ if(Number(version)<111){
  assert.ok(app.includes('Reintentar actualización'),'Feed retry missing');
  assert.ok(html.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from HTML');
  assert.ok(sw.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from offline cache');
- assert.ok(html.includes('app.js?v=107&combat=1'),'Provider carousel app cache-bust missing');
- assert.ok(sw.includes('app.js?v=107&combat=1'),'Provider carousel app asset missing from cache');
+ assert.ok(html.includes('app.js?v=107&remember=1'),'Provider carousel app cache-bust missing');
+ assert.ok(sw.includes('app.js?v=107&remember=1'),'Provider carousel app asset missing from cache');
  assert.ok(app.includes('function providerEventsForPlatform(name)'),'Provider event selection missing');
  assert.ok(app.includes('function changeProviderSlide(card,step)'),'Independent provider controls missing');
  assert.ok(app.includes('function loadProviderUpcomingEvents(force=false)'),'Upcoming verified events loader missing');
@@ -35,11 +35,19 @@ if(Number(version)<111){
  assert.ok(app.includes('digital.push({name:"CFL+"'),'CFL+ streaming tile missing');
  assert.ok(app.includes('const cflMatches=cflMatchesForPlatform(name)'),'CFL match cards not attached to providers');
  assert.ok(app.includes('if(leagueKey(e)==="CFL")return cflBroadcastPlatforms(e)'),'CFL platform assignments must use confirmed signals');
- assert.ok(sw.includes('cx-tv-v107-combat-20261118-1'),'NHL update cache rotation missing');
- assert.ok(html.includes('app.js?v=107&combat=1'),'NHL app version is not referenced by page');
- assert.ok(sw.includes('app.js?v=107&combat=1'),'NHL app version is not cached');
+ assert.ok(sw.includes('cx-tv-v107-remember-login-1'),'NHL update cache rotation missing');
+ assert.ok(html.includes('app.js?v=107&remember=1'),'NHL app version is not referenced by page');
+ assert.ok(sw.includes('app.js?v=107&remember=1'),'NHL app version is not cached');
  assert.ok(app.includes('resetPasswordForEmail(email,{redirectTo})'),'Supabase password self-service missing');
  assert.ok(app.includes('function loginAccessError(error)'),'Friendly login errors missing');
+ assert.ok(app.includes('function readRememberedLogin()'),'Remembered username helper missing');
+ assert.ok(app.includes('function rememberLoginIdentifier(identity,enabled)'),'Remembered username toggle missing');
+ assert.ok(app.includes('function offerBrowserPasswordSave(identity,password)'),'Native password manager integration missing');
+ assert.ok(app.includes('name="username"'),'Username browser autofill field missing');
+ assert.ok(app.includes('name="password"'),'Password browser autofill field missing');
+ assert.ok(app.includes('autocomplete="current-password"'),'Password autofill semantics missing');
+ assert.ok(app.includes('currentProfile?.status==="active"&&currentUser?.id===user.id'),'Only save browser credentials after verified login');
+ 
  assert.ok(app.includes('function nhlOfficialEvent(game)'),'Official NHL parser missing');
  assert.ok(app.includes('function mergeNhlEvents(official,espn)'),'NHL duplicate suppression missing');
  assert.ok(app.includes('function nhlScheduleGames(payload)'),'NHL weekly schedule parser missing');
