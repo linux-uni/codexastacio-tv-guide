@@ -726,32 +726,85 @@ function eventStateBadge(e){
  return '<span class="event-state neutral">'+esc(e?.strStatus||"Estado por actualizar")+'</span>';
 }
 function scoreBadge(e){const h=e.intHomeScore,a=e.intAwayScore,has=h!==null&&h!==undefined&&h!==""&&a!==null&&a!==undefined&&a!=="";return '<div class="scoreline">'+eventStateBadge(e)+(has?'<strong class="match-score">'+esc(h)+' - '+esc(a)+'</strong>':"")+(e.strProgress?'<span class="muted small">'+esc(e.strProgress)+'</span>':"")+'</div>'}
+// NHL: official score feed for current fixtures, official weekly schedule for
+// larger ranges, ESPN only as a fallback. All event days/times are in RD.
+function nhlOfficialEvent(game){
+ const start=game?.startTimeUTC?new Date(game.startTimeUTC):null;
+ if(!game?.id||!start||!Number.isFinite(start.getTime()))return null;
+ const home=game.homeTeam||{},away=game.awayTeam||{};
+ const teamName=t=>t.placeName?.default&&t.commonName?.default
+  ?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";
+ const state=String(game.gameState||"").toUpperCase();
+ const live=["LIVE","CRIT"].includes(state),finished=["OFF","FINAL"].includes(state);
+ const broadcasts=(game.tvBroadcasts||[]).map(x=>x.network).filter(Boolean);
+ return {
+  idEvent:"nhl-"+game.id,strEvent:teamName(away)+" vs "+teamName(home),
+  strHomeTeam:teamName(home),strAwayTeam:teamName(away),
+  strHomeTeamBadge:home.logo||"",strAwayTeamBadge:away.logo||"",
+  strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:start.toISOString(),
+  dateEvent:rdDateKey(start),
+  strTime:start.toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD",
+  strStatus:live?"LIVE":finished?"FINAL":state,
+  strProgress:live&&game.periodDescriptor?.number?"P"+game.periodDescriptor.number:"",
+  intHomeScore:live||finished?home.score??null:null,
+  intAwayScore:live||finished?away.score??null:null,
+  strTVStation:[...new Set(broadcasts)].join(", "),
+  _nhlOfficial:true
+ };
+}
+function nhlEventMatchKey(e){
+ const clean=name=>String(name||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const teams=[e?.strHomeTeam,e?.strAwayTeam].map(clean).filter(Boolean).sort();
+ return sliderLocalDate(e)+"|"+(teams.length===2?teams.join("|"):clean(e?.strEvent));
+}
+function mergeNhlEvents(official,espn){
+ const matches=new Map();
+ // Official fixtures retain their authoritative times, state and score.
+ for(const e of [...official,...espn]){
+  if(!e?.strEvent)continue;
+  const key=nhlEventMatchKey(e);
+  if(!matches.has(key))matches.set(key,e);
+ }
+ return [...matches.values()].sort((a,b)=>String(a.strTimestamp||a.dateEvent).localeCompare(String(b.strTimestamp||b.dateEvent)));
+}
+function nhlScheduleGames(payload){
+ if(Array.isArray(payload?.gameWeek))return payload.gameWeek.flatMap(day=>day.games||[]);
+ return Array.isArray(payload?.games)?payload.games:[];
+}
 async function nhlGames(offsets){
- const dates=offsets.map(n=>dateKey(n)),queue=[...dates],results=[];
+ if(!Array.isArray(offsets)||!offsets.length)return [];
+ const dates=[...new Set(offsets.map(n=>dateKey(n)))],requested=new Set(dates);
+ const officialGames=[],queue=[];
+ // A month view requires 5 weekly requests rather than 30 daily requests.
+ if(dates.length>10){
+  for(let i=0;i<dates.length;i+=7)queue.push({type:"schedule",date:dates[i]});
+  if(requested.has(dateKey(0)))queue.push({type:"score",date:dateKey(0)});
+ }else for(const date of dates)queue.push({type:"score",date});
  async function worker(){
   while(queue.length){
-   const date=queue.shift();
+   const job=queue.shift();
    try{
-    const response=await fetch("https://api-web.nhle.com/v1/score/"+date,{signal:AbortSignal.timeout(12000)});
-    if(!response.ok)throw Error("NHL HTTP "+response.status);
-    results.push(await response.json());
-   }catch(e){console.warn("NHL official feed "+date,e)}
+    const url="https://api-web.nhle.com/v1/"+job.type+"/"+job.date;
+    const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw Error("NHL "+job.type+" HTTP "+response.status);
+    const payload=await response.json();
+    const games=job.type==="schedule"?nhlScheduleGames(payload):(payload?.games||[]);
+    if(!Array.isArray(games))throw Error("Invalid NHL "+job.type+" response");
+    officialGames.push(...games.map(game=>({...game,_scoreFeed:job.type==="score"})));
+   }catch(error){console.warn("NHL official "+job.type+" feed "+job.date,error)}
   }
  }
- await Promise.all(Array.from({length:Math.min(5,dates.length)},worker));
- const games=results.flatMap(x=>x.games||[]);
- const official=[...new Map(games.map(g=>{
-  const h=g.homeTeam||{},a=g.awayTeam||{},state=String(g.gameState||"").toUpperCase(),live=["LIVE","CRIT"].includes(state),done=["OFF","FINAL"].includes(state);
-  const name=t=>t.placeName?.default&&t.commonName?.default?t.placeName.default+" "+t.commonName.default:t.name?.default||t.abbrev||"Equipo";
-  const ev={idEvent:"nhl-"+g.id,strEvent:name(a)+" vs "+name(h),strHomeTeam:name(h),strAwayTeam:name(a),strHomeTeamBadge:h.logo||"",strAwayTeamBadge:a.logo||"",strLeague:"NHL",strSport:"Ice Hockey",strTimestamp:g.startTimeUTC,dateEvent:g.gameDate||String(g.startTimeUTC||"").slice(0,10),strTime:g.startTimeUTC?new Date(g.startTimeUTC).toLocaleTimeString("es-DO",{timeZone:"America/Santo_Domingo",hour:"2-digit",minute:"2-digit"})+" RD":"",strStatus:live?"LIVE":done?"FINAL":state,strProgress:live&&g.periodDescriptor?.number?"P"+g.periodDescriptor.number:"",intHomeScore:live||done?h.score:null,intAwayScore:live||done?a.score:null,strTVStation:(g.tvBroadcasts||[]).map(t=>t.network).filter(Boolean).join(", "),_nhlOfficial:true};
-  return [g.id,ev]
- })).values()];
+ await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
+ const latest=new Map();
+ for(const game of officialGames){const previous=latest.get(game.id);if(!previous||(!previous._scoreFeed&&game._scoreFeed))latest.set(game.id,game)}
+ const official=[...latest.values()].map(nhlOfficialEvent).filter(Boolean)
+  .filter(e=>requested.has(e.dateEvent));
+ // ESPN backs up missing official fixtures; never replaces official scores.
  let backup=[];
- try{backup=await espnGames(offsets,"NHL")}catch(e){console.warn("NHL ESPN fallback",e)}
- const key=e=>String(e.dateEvent||"")+"|"+[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(x=>String(x).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"")).sort().join("|");
- const seen=new Set(official.map(key));
- return [...official,...backup.filter(e=>{const k=key(e);if(seen.has(k))return false;seen.add(k);return true})];
+ try{backup=await espnGames(offsets,"NHL")}catch(error){console.warn("NHL ESPN fallback",error)}
+ return mergeNhlEvents(official,backup.filter(e=>requested.has(sliderLocalDate(e))));
 }
+
 const REMINDER_STORAGE_PREFIX="cx-tv-reminders-v1:";
 function reminderStorageKey(){return REMINDER_STORAGE_PREFIX+String(currentUser?.id||"guest")}
 function readSavedReminders(){
@@ -927,7 +980,7 @@ async function loadSchedule(silent=false){
   });
   const boxing=includeBoxing?boxingGames(offsets,rs):[];
   const external=rs.flatMap(x=>x?.events||[]).filter(e=>e.strEvent)
-   .filter(e=>!sportMatches(e,"MLB")&&!sportMatches(e,"NHL")&&!sportMatches(e,"Boxeo")&&!(ucl.length&&isChampionsLeague(e)));
+   .filter(e=>!sportMatches(e,"MLB")&&(!nhl.length||!sportMatches(e,"NHL"))&&!sportMatches(e,"Boxeo")&&!(ucl.length&&isChampionsLeague(e)));
   const espnMatchKey=e=>{
    const date=String(e.dateEvent||"");
    const sides=[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"")).sort();
@@ -1271,7 +1324,8 @@ async function loadSportsSlider(force=false){
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
   const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
-  const events=[...featuredCflGreyCup(today),...general,...mlb,...nhl,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const generalWithoutNhl=nhl.length?general.filter(e=>!sportMatches(e,"NHL")):general;
+  const events=[...featuredCflGreyCup(today),...nhl,...generalWithoutNhl,...mlb,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>{
