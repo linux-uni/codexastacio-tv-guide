@@ -245,7 +245,7 @@ test("MMA/boxing feed merger de-duplicates repeated fights by date and fighters"
  assert.equal(fights.filter(e=>e.strEvent===other.strEvent).length,1);
 });
 
-test("Remembered login stores only identifier and honors opt-out",()=>{
+test("Remembered login stores only identifier and honors opt-out",async()=>{
  const app=fs.readFileSync("app.js","utf8");
  const start=app.indexOf('const REMEMBERED_LOGIN_KEY=');
  const end=app.indexOf('\nfunction loginAccessError(error)',start);
