@@ -63,7 +63,7 @@ test("CFL digital platform labels require confirmed broadcast signals",()=>{
  const official={strLeague:"CFL Grey Cup",strEvent:"Montreal Alouettes vs Edmonton Elks",dateEvent:"2026-11-15",strTVStation:"DAZN, CFL+"};
  const unconfirmed={strLeague:"CFL Regular Season",strEvent:"Other CFL match",dateEvent:"2026-11-15",strTVStation:"TSN"};
  const ctx=vm.createContext({
-  sliderEvents:[official,unconfirmed],scheduleEvents:[],providers:[{name:"DAZN"},{name:"Disney+"}],
+  BOXING_SCHEDULE:[], sliderEvents:[official,unconfirmed],scheduleEvents:[],providers:[{name:"DAZN"},{name:"Disney+"}],
   dateKey:()=> "2026-11-15",sliderLocalDate:e=>e.dateEvent,
   leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"NFL",
   streamPlatform:name=>({dazn:"DAZN","cfl+":"CFL+"})[String(name).toLowerCase()]||"",
@@ -93,7 +93,7 @@ test("Streaming cards rotate independent confirmed events without guessing right
  const unverified={strLeague:"Football",strEvent:"Not confirmed",dateEvent:"2026-11-15",_managed:true,_verified:false,_providerName:"DAZN"};
  const noSignal={strLeague:"Football",strEvent:"No rights information",dateEvent:"2026-11-15"};
  const ctx=vm.createContext({
-  sliderEvents:[today,noSignal],scheduleEvents:[tomorrow,disney,unverified,today],
+  BOXING_SCHEDULE:[], sliderEvents:[today,noSignal],scheduleEvents:[tomorrow,disney,unverified,today],
   providers:[{name:"DAZN"},{name:"Disney+"}],
   dateKey:offset=>{const d=new Date(Date.UTC(2026,10,15+(offset||0)));return d.toISOString().slice(0,10)},
   sliderLocalDate:e=>e.dateEvent,leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"OTHER",
