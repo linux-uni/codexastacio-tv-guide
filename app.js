@@ -346,7 +346,7 @@ function eventBroadcastProviders(e){
 function providerEventsForPlatform(name){
  const key=canonicalProviderName(name),today=dateKey(0),lastDay=dateKey(6);
  if(!key)return [];
- const candidates=[...sliderEvents,...scheduleEvents,...providerUpcomingEvents];
+ const candidates=[...sliderEvents,...scheduleEvents,...providerUpcomingEvents,...BOXING_SCHEDULE];
  if(key==="Netflix"){
   const announced=netflixUpcomingEvent();
   if(announced)candidates.push(announced);
@@ -934,7 +934,7 @@ function scheduleCards(){
  return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-combat-type="'+esc(combatCategory(e))+'" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):e._combatOfficial?" • Cartelera del organizador":"")+'</div>'+(e._combatOfficial?'<div class="combat-official-info">Horario y disponibilidad de transmisión por confirmar</div>':"")+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
 }
 
-const BOXING_SCHEDULE_URL="https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule";
+const BOXING_SCHEDULE_URL="https://www.boxingscene.com/schedule";
 const BOXING_SCHEDULE=[
  ["2026-10-17","Daniel Dubois vs Fabio Wardley","London, DAZN","DAZN"],
  ["2026-10-17","Sebastian Fundora vs Ermal Hadribeaj","Las Vegas, DAZN / TNT","DAZN"],
@@ -942,7 +942,10 @@ const BOXING_SCHEDULE=[
  ["2026-10-24","Emanuel Navarrete vs O'Shaquie Foster","San Antonio, DAZN","DAZN"],
  ["2026-10-31","Canelo Alvarez vs Christian Mbilli","Riyadh, DAZN PPV","DAZN"],
  ["2026-11-07","Chris Billam-Smith vs Cheavon Clarke","London, Paramount+","Paramount+"],
- ["2026-11-08","Alycia Baumgardner vs Elif Nur Turhan","Arlington, ESPN","ESPN"]
+ ["2026-11-08","Alycia Baumgardner vs Elif Nur Turhan","Arlington, ESPN","ESPN"],
+ ["2026-11-20","Gabriela Fundora vs Jasmina Zapotoczna","Indio, California • DAZN","DAZN"],
+ ["2026-11-28","Agit Kabayel vs Nelson Hysa","Düsseldorf, Alemania • DAZN","DAZN"],
+ ["2026-12-04","Adam Azim vs Gabriel Gollaz Valenzuela","Londres • DAZN","DAZN"]
 ].map((row,index)=>{
  const [dateEvent,strEvent,details,platform]=row,parts=strEvent.split(" vs ");
  return {idEvent:"espn-boxing-"+dateEvent+"-"+index,strEvent,strHomeTeam:parts[0],strAwayTeam:parts[1],strSport:"Boxing",strLeague:"Boxeo • "+details,dateEvent,strTime:"Hora por confirmar · RD",_boxingSchedule:true,_espn:true,_watchOptions:platform?[platform]:[],_sourceUrl:BOXING_SCHEDULE_URL};
