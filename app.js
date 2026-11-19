@@ -75,7 +75,7 @@ const ENGLISH_COPY=[
  ["Cuenta","Account"],["Cancelar","Cancel"],["Guardar","Save"],["Eventos deportivos especiales","Special sports events"],
  ["La tarjeta se actualizará cuando haya un evento anunciado.","This card will update when an event is announced."],
  ["Programación por actualizar","Schedule to be updated"]
- ,["AGENDA DEL DÍA","TODAY’S SCHEDULE"],["Eventos deportivos de hoy","Today’s sports events"],["Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado","Boxing · UFC/MMA · MLB · NFL · NHL · Formula 1 · Champions League and top soccer"],["Cargando eventos deportivos…","Loading sports events…"],["Sin eventos activos ahora","No active events right now"],["La agenda se actualiza automáticamente. Los eventos finalizados se retiran.","The schedule updates automatically. Finished events are removed."],["Sin eventos activos","No active events"],["eventos","events"],["Horario por confirmar","Time to be confirmed"]
+ ,["AGENDA DEL DÍA","TODAY’S SCHEDULE"],["Eventos deportivos de hoy","Today’s sports events"],["Boxeo · UFC · MMA · BKFC/BKB · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado","Boxing · UFC/MMA · MLB · NFL · NHL · Formula 1 · Champions League and top soccer"],["Cargando eventos deportivos…","Loading sports events…"],["Sin eventos activos ahora","No active events right now"],["La agenda se actualiza automáticamente. Los eventos finalizados se retiran.","The schedule updates automatically. Finished events are removed."],["Sin eventos activos","No active events"],["eventos","events"],["Horario por confirmar","Time to be confirmed"]
  , ["Boxeo / UFC-MMA","Boxing / UFC-MMA"], ["Boxeo profesional y artes marciales mixtas","Boxing and mixed martial arts"],
  ["Centro de ajustes","Settings Center"],["GESTIONA TU CUENTA Y TUS PREFERENCIAS","MANAGE YOUR ACCOUNT AND PREFERENCES"],
  ["Ajustes","Settings"],
@@ -933,19 +933,47 @@ const BOXING_SCHEDULE=[
  ["2026-10-24","Emanuel Navarrete vs O'Shaquie Foster","San Antonio, DAZN","DAZN"],
  ["2026-10-31","Canelo Alvarez vs Christian Mbilli","Riyadh, DAZN PPV","DAZN"],
  ["2026-11-07","Chris Billam-Smith vs Cheavon Clarke","London, Paramount+","Paramount+"],
- ["2026-11-08","Alycia Baumgardner vs Elif Nur Turhan","Arlington, ESPN","ESPN"],
- ["2026-12-11","Tyson Fury vs Anthony Joshua","Cardiff, Netflix","Netflix"],
- ["2026-12-12","Dmitry Bivol vs Callum Smith","Yekaterinburg",""]
+ ["2026-11-08","Alycia Baumgardner vs Elif Nur Turhan","Arlington, ESPN","ESPN"]
 ].map((row,index)=>{
  const [dateEvent,strEvent,details,platform]=row,parts=strEvent.split(" vs ");
  return {idEvent:"espn-boxing-"+dateEvent+"-"+index,strEvent,strHomeTeam:parts[0],strAwayTeam:parts[1],strSport:"Boxing",strLeague:"Boxeo • "+details,dateEvent,strTime:"Hora por confirmar · RD",_boxingSchedule:true,_espn:true,_watchOptions:platform?[platform]:[],_sourceUrl:BOXING_SCHEDULE_URL};
 });
+// Upcoming bare-knuckle cards checked against their organizers on 2026-11-18.
+// Do not fabricate regional start times or broadcaster rights.
+const BARE_KNUCKLE_EVENTS=[
+ ["2026-11-20","BKFC","BKFC Fight Night Myrtle Beach","Keith Richardson","Joshua Oxendine","https://www.bkfc.com/events"],
+ ["2026-11-21","BKB","Bally's Fight Night Burbank","Hank Lundy","Jairo Santos","https://bkbbareknuckle.com/schedule/bkb-burbank-ballys-show/"],
+ ["2026-12-04","BKFC","BKFC Fight Night Hershey","Pague","Richman","https://www.bkfc.com/events"],
+ ["2026-12-11","BKFC","BKFC 97 Hollywood","Henry","Collard","https://www.bkfc.com/events"]
+].map(([dateEvent,org,eventName,home,away,source])=>({
+ idEvent:"official-"+org.toLowerCase()+"-"+dateEvent,
+ strEvent:eventName+" • "+home+" vs "+away,
+ strHomeTeam:home,strAwayTeam:away,strSport:"Bare Knuckle Boxing",
+ strLeague:org+" • "+eventName,dateEvent,strTime:"Hora por confirmar · RD",
+ strStatus:"SCHEDULED",_sourceUrl:source,_combatOfficial:true
+}));
 function boxingGames(offsets,responses){
  const start=dateKey(Math.min(...offsets)),end=dateKey(Math.max(...offsets));
- const live=responses.flatMap(x=>x?.events||[]).filter(e=>e.strEvent&&sportMatches(e,"Boxeo")).map(e=>({...e,_boxingFeed:true}));
+ const live=responses.flatMap(x=>x?.events||[]).filter(e=>e?.strEvent&&combatCategory(e)==="BOXEO").map(e=>({...e,_boxingFeed:true}));
  const curated=BOXING_SCHEDULE.filter(e=>e.dateEvent>=start&&e.dateEvent<=end);
- return [...new Map([...curated,...live].map(e=>[e.idEvent||[e.dateEvent,e.strEvent].join("|"),e])).values()];
+ return [...new Map([...live,...curated].map(e=>[combatEventKey(e),e])).values()];
 }
+function combatEvents(offsets,responses=[],espnRows=[]){
+ const start=dateKey(Math.min(...offsets)),end=dateKey(Math.max(...offsets));
+ const bare=BARE_KNUCKLE_EVENTS.filter(e=>e.dateEvent>=start&&e.dateEvent<=end);
+ const boxing=boxingGames(offsets,responses);
+ const other=responses.flatMap(x=>x?.events||[]).filter(e=>e?.strEvent&&["UFC","MMA","BARE KNUCKLE"].includes(combatCategory(e)));
+ const ufc=espnRows.filter(e=>e?.strEvent&&["UFC","MMA"].includes(combatCategory(e)));
+ const found=new Map();
+ for(const e of [...ufc,...bare,...boxing,...other]){
+  const date=sliderLocalDate(e);
+  if(date<start||date>end)continue;
+  const key=combatEventKey(e);
+  if(!found.has(key))found.set(key,e);
+ }
+ return [...found.values()].sort((a,b)=>String(a.strTimestamp||a.dateEvent).localeCompare(String(b.strTimestamp||b.dateEvent)));
+}
+
 function setupScheduleAutoRefresh(){
  if(!scheduleRefreshTimer)scheduleRefreshTimer=setInterval(()=>{
   if((state.view==="schedule"||state.view==="favorites")&&document.visibilityState==="visible")loadSchedule(true);
@@ -968,7 +996,7 @@ async function loadSchedule(silent=false){
  const includeUcl=allSports||selected==="Fútbol"||selected==="Champions League";
  const includeMlb=allSports||selected==="MLB";
  const includeNhl=allSports||selected==="NHL";
- const includeBoxing=allSports||selected===COMBAT_CATEGORY||selected==="Boxeo"||selected==="UFC/MMA";
+ const includeBoxing=allSports||[COMBAT_CATEGORY,"Boxeo","UFC/MMA","BKFC/BKB"].includes(selected);
  const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"&&key!=="MLB"):
   selected==="NFL"?["NFL"]:selected==="NBA"?["NBA"]:(selected===COMBAT_CATEGORY||selected==="UFC/MMA")?["UFC"]:
   selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:selected==="Fútbol"?["SOCCER"]:[];
@@ -994,9 +1022,9 @@ async function loadSchedule(silent=false){
    const d=x.starts_at?new Date(x.starts_at):null;
    return {strEvent:x.title,strSport:x.sport||"Sports",strTimestamp:x.starts_at,dateEvent:d?d.toISOString().slice(0,10):"",strTime:d?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"",strLeague:x.region||x.rights_scope||"",_managed:true,_verified:!!x.verified,_providerName:providers.find(p=>String(p.id)===String(x.provider_id))?.name||"",_channelName:channels.find(ch=>String(ch.id)===String(x.channel_id))?.name||""};
   });
-  const boxing=includeBoxing?boxingGames(offsets,rs):[];
+  const boxing=includeBoxing?combatEvents(offsets,rs,espn):[];
   const external=rs.flatMap(x=>x?.events||[]).filter(e=>e.strEvent)
-   .filter(e=>!sportMatches(e,"MLB")&&(!nhl.length||!sportMatches(e,"NHL"))&&!sportMatches(e,"Boxeo")&&!(ucl.length&&isChampionsLeague(e)));
+   .filter(e=>!sportMatches(e,"MLB")&&(!nhl.length||!sportMatches(e,"NHL"))&&(!includeBoxing||!combatCategory(e))&&!(ucl.length&&isChampionsLeague(e)));
   const espnMatchKey=e=>{
    const date=String(e.dateEvent||"");
    const sides=[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"")).sort();
@@ -1008,7 +1036,7 @@ async function loadSchedule(silent=false){
    const label=String(e.strEvent||"").toLowerCase().replace(/[^a-z0-9]/g,"");
    return !primaryIds.has(espnMatchKey(e))&&!primaryIds.has(String(e.dateEvent||"")+"|"+label);
   });
-  scheduleEvents=[...managed,...fallback,...mlb,...nhl,...ucl,...boxing,...espn]
+  scheduleEvents=[...managed,...fallback,...mlb,...nhl,...ucl,...boxing,...espn.filter(e=>!includeBoxing||!combatCategory(e))]
    .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||"")))
    .slice(0,600);
   checkTransmissionAnnouncements(scheduleEvents);renderFavoriteHome(); const target=document.getElementById("scheduleDynamic");
@@ -1031,7 +1059,7 @@ async function loadSchedule(silent=false){
  }
 }
 
-function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
+function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC · MMA · BKFC/BKB · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
  const filteredEvents=state.sport==="Todos"?events:events.filter(e=>e.sport===state.sport);
@@ -1339,13 +1367,15 @@ async function loadSportsSlider(force=false){
    championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
-  const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
+  const boxing=combatEvents([0],[{events:general}],espn);
   const generalWithoutNhl=nhl.length?general.filter(e=>!sportMatches(e,"NHL")):general;
-  const events=[...featuredCflGreyCup(today),...nhl,...generalWithoutNhl,...mlb,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const generalWithoutCombat=generalWithoutNhl.filter(e=>!combatCategory(e));
+  const espnWithoutCombat=espn.filter(e=>!combatCategory(e));
+  const events=[...featuredCflGreyCup(today),...boxing,...nhl,...generalWithoutCombat,...mlb,...ucl,...espnWithoutCombat].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>{
-    const priority=e=>({"CFL":-1,"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
+    const priority=e=>({"CFL":-1,"BOXEO":0,"BKFC":1,"BKB":1,"UFC":1,"MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
     return priority(a)-priority(b)||String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""));
    }).slice(0,48);
   shuffleDailyEvents();
