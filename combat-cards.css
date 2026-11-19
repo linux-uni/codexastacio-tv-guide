@@ -1,0 +1,30 @@
+/* v107 · Combat events only. Preserve the existing application layout. */
+.combat-filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px;padding:9px;border:1px solid rgba(109,155,227,.24);border-radius:16px;background:rgba(4,14,36,.72)}
+.combat-filter-chip{border:1px solid rgba(116,166,228,.32);border-radius:24px;padding:10px 14px;min-height:42px;background:rgba(13,36,68,.86);color:#cce5ff;cursor:pointer;font-weight:800;transition:background .16s,border-color .16s}
+.combat-filter-chip.active{background:linear-gradient(120deg,#165baf,#4329a1);border-color:#7ad8ff;color:white;box-shadow:0 0 0 1px rgba(65,168,255,.13)}
+.combat-filter-chip:focus-visible{outline:2px solid #6bd7ff;outline-offset:3px}
+.schedule-card[data-combat-type="BOXEO"]{border-left:3px solid #e7b44b}
+.schedule-card[data-combat-type="UFC"]{border-left:3px solid #fa5656}
+.schedule-card[data-combat-type="MMA"]{border-left:3px solid #b078ff}
+.schedule-card[data-combat-type="BARE KNUCKLE"]{border-left:3px solid #ff7c3b}
+.schedule-card[data-combat-type="BARE KNUCKLE"] .schedule-info .badge{background:rgba(152,60,18,.58);color:#ffcaad}
+.schedule-card[data-combat-type="BOXEO"] .schedule-info .badge{background:rgba(116,78,18,.6);color:#ffe5a3}
+.schedule-card[data-combat-type="UFC"] .schedule-info .badge{background:rgba(112,28,38,.57);color:#ffb9bd}
+.schedule-card[data-combat-type="MMA"] .schedule-info .badge{background:rgba(83,44,145,.55);color:#dfc7ff}
+.bare-knuckle-poster{background:radial-gradient(circle at 50% 22%,rgba(241,116,27,.25),transparent 58%),linear-gradient(130deg,#25150f,#341d12 54%,#150e17)!important}
+.bare-knuckle-poster .boxing-poster-glow{background:radial-gradient(circle at 50% 45%,rgba(240,118,28,.22),transparent 65%)}
+.bare-knuckle-poster .boxing-poster-label{color:#ffd2a4!important}
+.bare-knuckle-poster .boxing-poster-match strong{color:#ffa465}
+.mma-poster .boxing-poster-label{color:#ff909d}
+.combat-official-info{font-size:12px;font-weight:700;color:#f2bf91;margin:6px 0 8px}
+.daily-card-stage.feed-bkfc,.daily-card-stage.feed-bkb{border-color:rgba(255,150,83,.42)}
+.daily-card-stage.feed-ufc{border-color:rgba(255,83,93,.42)}
+.daily-card-stage.feed-mma{border-color:rgba(156,113,255,.42)}
+.daily-card-stage.feed-boxeo{border-color:rgba(247,196,89,.42)}
+@media(max-width:760px){
+ .combat-filter-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:7px}
+ .combat-filter-chip{min-width:0;padding:9px 6px;font-size:11px;line-height:1.2}
+ .combat-filter-chip:last-child{grid-column:span 2}
+ .schedule-card[data-combat-type] .boxing-poster{max-width:100%;overflow:hidden}
+}
+@media(prefers-reduced-motion:reduce){.combat-filter-chip{transition:none}}

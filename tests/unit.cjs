@@ -63,7 +63,7 @@ test("CFL digital platform labels require confirmed broadcast signals",()=>{
  const official={strLeague:"CFL Grey Cup",strEvent:"Montreal Alouettes vs Edmonton Elks",dateEvent:"2026-11-15",strTVStation:"DAZN, CFL+"};
  const unconfirmed={strLeague:"CFL Regular Season",strEvent:"Other CFL match",dateEvent:"2026-11-15",strTVStation:"TSN"};
  const ctx=vm.createContext({
-  sliderEvents:[official,unconfirmed],scheduleEvents:[],providers:[{name:"DAZN"},{name:"Disney+"}],
+  BOXING_SCHEDULE:[], sliderEvents:[official,unconfirmed],scheduleEvents:[],providers:[{name:"DAZN"},{name:"Disney+"}],
   dateKey:()=> "2026-11-15",sliderLocalDate:e=>e.dateEvent,
   leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"NFL",
   streamPlatform:name=>({dazn:"DAZN","cfl+":"CFL+"})[String(name).toLowerCase()]||"",
@@ -93,7 +93,7 @@ test("Streaming cards rotate independent confirmed events without guessing right
  const unverified={strLeague:"Football",strEvent:"Not confirmed",dateEvent:"2026-11-15",_managed:true,_verified:false,_providerName:"DAZN"};
  const noSignal={strLeague:"Football",strEvent:"No rights information",dateEvent:"2026-11-15"};
  const ctx=vm.createContext({
-  sliderEvents:[today,noSignal],scheduleEvents:[tomorrow,disney,unverified,today],
+  BOXING_SCHEDULE:[], sliderEvents:[today,noSignal],scheduleEvents:[tomorrow,disney,unverified,today],
   providers:[{name:"DAZN"},{name:"Disney+"}],
   dateKey:offset=>{const d=new Date(Date.UTC(2026,10,15+(offset||0)));return d.toISOString().slice(0,10)},
   sliderLocalDate:e=>e.dateEvent,leagueKey:e=>e.strLeague.startsWith("CFL")?"CFL":"OTHER",
@@ -182,4 +182,65 @@ test("NHL weekly API handles month calendars and ESPN backup",async()=>{
  assert.ok(fetches.some(u=>u.includes("/v1/schedule/")));
  assert.ok(fetches.some(u=>u.includes("/v1/score/2026-11-18")));
  assert.ok(fetches.length<=6,"30 days should require no more than six official NHL requests");
+});
+
+test("Combat classification keeps Boxing, UFC, MMA and BKFC/BKB separate",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const start=app.indexOf("function combatCategory(e){"),end=app.indexOf("\nfunction teamLogo(e,side)",start);
+ assert.ok(start>=0&&end>start,"Combat classification missing");
+ const context=vm.createContext({isChampionsLeague:()=>false,COMBAT_CATEGORY:"Boxeo / UFC-MMA"});
+ vm.runInContext(app.slice(start,end),context);
+ const as=(league,sport)=>({strLeague:league,strSport:sport,strEvent:"Test fight"});
+ assert.equal(context.combatCategory(as("Boxeo profesional","Boxing")),"BOXEO");
+ assert.equal(context.combatCategory(as("UFC Fight Night","MMA")),"UFC");
+ assert.equal(context.combatCategory(as("PFL Championship","Mixed Martial Arts")),"MMA");
+ assert.equal(context.combatCategory(as("BKFC Fight Night","Bare Knuckle Boxing")),"BARE KNUCKLE");
+ assert.equal(context.combatCategory(as("BKB 62","Bare Knuckle Boxing")),"BARE KNUCKLE");
+ assert.equal(context.leagueKey(as("BKFC Fight Night","Bare Knuckle Boxing")),"BKFC");
+ assert.equal(context.leagueKey(as("BKB 62","Bare Knuckle Boxing")),"BKB");
+ assert.equal(context.leagueKey(as("UFC 335","MMA")),"UFC");
+ assert.equal(context.leagueKey(as("Boxeo profesional","Boxing")),"BOXEO");
+ const matcher=app.slice(app.indexOf("function sportMatches(e,s){"),app.indexOf("\nconst ESPN_SPORT_FEEDS="));
+ vm.runInContext(matcher,context);
+ assert.equal(context.sportMatches(as("BKFC","Bare Knuckle Boxing"),"Boxeo"),false);
+ assert.equal(context.sportMatches(as("UFC","MMA"),"Boxeo"),false);
+ assert.equal(context.sportMatches(as("BKB","Bare Knuckle Boxing"),"BKFC/BKB"),true);
+ assert.equal(context.sportMatches(as("Boxeo","Boxing"),"UFC/MMA"),false);
+});
+test("Verified bare-knuckle fixtures render without fabricated local time or streaming",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const classification=app.slice(app.indexOf("function combatCategory(e){"),app.indexOf("\nfunction teamLogo(e,side)"));
+ const combat=app.slice(app.indexOf("const BARE_KNUCKLE_EVENTS=["),app.indexOf("\nfunction setupScheduleAutoRefresh()"));
+ const ctx=vm.createContext({
+  isChampionsLeague:()=>false,
+  dateKey:n=>new Date(Date.UTC(2026,10,18+(n||0))).toISOString().slice(0,10),
+  sliderLocalDate:e=>e.dateEvent,
+  BOXING_SCHEDULE:[]
+ });
+ vm.runInContext(classification+combat,ctx);
+ const result=Array.from(ctx.combatEvents(Array.from({length:30},(_,i)=>i),[{events:[]}],[]));
+ assert.equal(result.filter(e=>e._combatOfficial).length,4);
+ assert.equal(result.filter(e=>ctx.combatCategory(e)==="BARE KNUCKLE").length,4);
+ const bkb=result.find(e=>e.strLeague.startsWith("BKB"));
+ assert.match(bkb.strEvent,/Hank Lundy.*Jairo Santos/);
+ assert.equal(bkb.dateEvent,"2026-11-21");
+ assert.equal(bkb.strTVStation,undefined);
+ assert.match(bkb.strTime,/por confirmar/);
+ const bkfc=result.find(e=>e.dateEvent==="2026-11-20");
+ assert.match(bkfc.strEvent,/Richardson.*Oxendine/);
+ assert.match(bkfc._sourceUrl,/bkfc\.com/);
+});
+test("MMA/boxing feed merger de-duplicates repeated fights by date and fighters",()=>{
+ const app=fs.readFileSync("app.js","utf8");
+ const classification=app.slice(app.indexOf("function combatCategory(e){"),app.indexOf("\nfunction teamLogo(e,side)"));
+ const combat=app.slice(app.indexOf("const BARE_KNUCKLE_EVENTS=["),app.indexOf("\nfunction setupScheduleAutoRefresh()"));
+ const sample={strSport:"MMA",strLeague:"UFC",strEvent:"Fighter A vs Fighter B",strHomeTeam:"Fighter A",strAwayTeam:"Fighter B",dateEvent:"2026-11-21"};
+ const other={strSport:"Boxing",strLeague:"Boxeo",strEvent:"Boxer A vs Boxer B",strHomeTeam:"Boxer A",strAwayTeam:"Boxer B",dateEvent:"2026-11-21"};
+ const ctx=vm.createContext({isChampionsLeague:()=>false,
+  dateKey:n=>new Date(Date.UTC(2026,10,18+(n||0))).toISOString().slice(0,10),
+  sliderLocalDate:e=>e.dateEvent,BOXING_SCHEDULE:[]});
+ vm.runInContext(classification+combat,ctx);
+ const fights=Array.from(ctx.combatEvents([3],[{events:[sample,other]}],[sample]));
+ assert.equal(fights.filter(e=>e.strEvent===sample.strEvent).length,1);
+ assert.equal(fights.filter(e=>e.strEvent===other.strEvent).length,1);
 });

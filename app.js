@@ -75,7 +75,7 @@ const ENGLISH_COPY=[
  ["Cuenta","Account"],["Cancelar","Cancel"],["Guardar","Save"],["Eventos deportivos especiales","Special sports events"],
  ["La tarjeta se actualizará cuando haya un evento anunciado.","This card will update when an event is announced."],
  ["Programación por actualizar","Schedule to be updated"]
- ,["AGENDA DEL DÍA","TODAY’S SCHEDULE"],["Eventos deportivos de hoy","Today’s sports events"],["Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado","Boxing · UFC/MMA · MLB · NFL · NHL · Formula 1 · Champions League and top soccer"],["Cargando eventos deportivos…","Loading sports events…"],["Sin eventos activos ahora","No active events right now"],["La agenda se actualiza automáticamente. Los eventos finalizados se retiran.","The schedule updates automatically. Finished events are removed."],["Sin eventos activos","No active events"],["eventos","events"],["Horario por confirmar","Time to be confirmed"]
+ ,["AGENDA DEL DÍA","TODAY’S SCHEDULE"],["Eventos deportivos de hoy","Today’s sports events"],["Boxeo · UFC · MMA · BKFC/BKB · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado","Boxing · UFC/MMA · MLB · NFL · NHL · Formula 1 · Champions League and top soccer"],["Cargando eventos deportivos…","Loading sports events…"],["Sin eventos activos ahora","No active events right now"],["La agenda se actualiza automáticamente. Los eventos finalizados se retiran.","The schedule updates automatically. Finished events are removed."],["Sin eventos activos","No active events"],["eventos","events"],["Horario por confirmar","Time to be confirmed"]
  , ["Boxeo / UFC-MMA","Boxing / UFC-MMA"], ["Boxeo profesional y artes marciales mixtas","Boxing and mixed martial arts"],
  ["Centro de ajustes","Settings Center"],["GESTIONA TU CUENTA Y TUS PREFERENCIAS","MANAGE YOUR ACCOUNT AND PREFERENCES"],
  ["Ajustes","Settings"],
@@ -133,6 +133,7 @@ function observeInterfaceLanguage(){
  });
  localeObserver.observe(app,{childList:true,subtree:true,characterData:true});
 }
+let combatFilter="Todos";
 let sb=null,currentUser=null,currentProfile=null,scheduleEvents=[],scheduleRange="today",channelFilter="Todos",sliderTimer=null,sliderEvents=[],slideIndex=0,scheduleRefreshTimer=null,scheduleRefreshBound=false,scheduleRequestId=0,sliderRefreshTimer=null,sliderVisibilityBound=false,sliderLastRefresh=0,sliderLoadedDay="",sliderLoading=false,reminderEventIndex=new Map(),reminderInteractionsBound=false,reminderTicker=null,deferredInstallPrompt=null,scheduleFilters={league:"",team:"",platform:"",favoritesOnly:false},favoriteInteractionsBound=false,state={view:"home",sport:"Todos",language:detectDeviceLanguage()};
 const OFFICIAL_SCHEDULES={
  UCL:"https://www.uefa.com/uefachampionsleague/fixtures-results/",
@@ -141,10 +142,26 @@ const OFFICIAL_SCHEDULES={
  MLB:"https://www.mlb.com/schedule",
  NBA:"https://www.nba.com/schedule",
  BOXEO:"https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule",
+ UFC:"https://www.ufc.com/events",
+ BKFC:"https://www.bkfc.com/events",
+ BKB:"https://bkbbareknuckle.com/schedule/",
  CFL:"https://www.cfl.ca/schedule/"
 };
-function officialScheduleLink(e){const k=leagueKey(e);return k?OFFICIAL_SCHEDULES[k]||"":""}
-function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(/\bcfl\b|grey cup|canadian football league/.test(l)||/canadian football/.test(s))return "CFL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";if(/boxing|boxeo/.test(l+" "+s))return "BOXEO";if(/ufc|mma|mixed martial/.test(l+" "+s))return "UFC/MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
+function officialScheduleLink(e){const k=leagueKey(e);return e?._sourceUrl||OFFICIAL_SCHEDULES[k]||""}
+function combatCategory(e){
+ const value=String([e?.strSport,e?.sport,e?.strLeague,e?.title,e?.strEvent].filter(Boolean).join(" ")).toLowerCase();
+ if(/\bbkfc\b|\bbkb\b|bare[\s-]*knuckle|boxeo\s*bk/.test(value))return "BARE KNUCKLE";
+ if(/\bufc\b|ultimate fighting/.test(value))return "UFC";
+ if(/\bmma\b|mixed martial|\bpfl\b|bellator|\brizin\b|one championship/.test(value))return "MMA";
+ if(/boxing|boxeo|professional boxing/.test(value))return "BOXEO";
+ return "";
+}
+function combatEventKey(e){
+ const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+ const names=[e?.strHomeTeam,e?.strAwayTeam].filter(Boolean).map(norm).sort();
+ return String(e?.dateEvent||"").slice(0,10)+"|"+(combatCategory(e)==="BARE KNUCKLE"?"BARE KNUCKLE":combatCategory(e))+"|"+(names.length===2?names.join("|"):norm(e?.strEvent));
+}
+function leagueKey(e){const s=String(e?.strSport||e?.sport||"").toLowerCase(),l=String(e?.strLeague||e?.title||"").toLowerCase();if(isChampionsLeague(e))return "UCL";if(/\bcfl\b|grey cup|canadian football league/.test(l)||/canadian football/.test(s))return "CFL";if(l.includes("nfl")||s.includes("american football"))return "NFL";if(l.includes("nhl")||s.includes("ice hockey"))return "NHL";if(l.includes("mlb")||s.includes("baseball"))return "MLB";if(l.includes("nba")||(l.includes("national basketball association")))return "NBA";const combat=combatCategory(e);if(combat==="BARE KNUCKLE")return /\bbkb\b/.test(l)?"BKB":"BKFC";if(combat==="BOXEO")return "BOXEO";if(combat==="UFC")return "UFC";if(combat==="MMA")return "MMA";if(/formula 1|formula one|\bf1\b/.test(l+" "+s))return "F1";if(/tennis|\batp\b|\bwta\b/.test(l+" "+s))return "TENIS";if(/ncaa|college|division 1/.test(l+" "+s))return "NCAA";if(/soccer|fútbol/.test(s)||/premier league|la liga|serie a|bundesliga|uefa/.test(l))return "SOCCER";if(s.includes("basketball"))return "NBA";return ""}
 
 function teamLogo(e,side){return side==="home"?(e.strHomeTeamBadge||e.strHomeTeamLogo||e.strHomeTeamBanner||""):(e.strAwayTeamBadge||e.strAwayTeamLogo||e.strAwayTeamBanner||"")}
 function teamName(e,side){return side==="home"?(e.strHomeTeam||"Local"):(e.strAwayTeam||"Visitante")}
@@ -156,7 +173,8 @@ function sportArtInfo(e){
  if(/baseball|\bmlb\b/.test(value))return {key:"baseball",label:"BÉISBOL",icon:"⚾"};
  if(/basketball|\bnba\b/.test(value))return {key:"basketball",label:"BALONCESTO",icon:"🏀"};
  if(/tennis|tenis|\batp\b|\bwta\b/.test(value))return {key:"tennis",label:"TENIS",icon:"🎾"};
- if(/ufc|mma|mixed martial|boxing|boxeo/.test(value))return {key:"combat",label:/boxing|boxeo/.test(value)?"BOXEO":"UFC · MMA",icon:"🥊"};
+ if(combatCategory(e)==="BARE KNUCKLE")return {key:"combat",label:"BARE KNUCKLE",icon:"🥊"};
+ if(combatCategory(e))return {key:"combat",label:combatCategory(e)==="BOXEO"?"BOXEO":combatCategory(e)==="UFC"?"UFC":"MMA",icon:"🥊"};
  if(/formula 1|formula one|\bf1\b|motor racing|motorsport|racing/.test(value))return {key:"racing",label:"MOTORSPORT",icon:"🏁"};
  if(/soccer|fútbol|\bucl\b|champions league/.test(value))return {key:"soccer",label:"FÚTBOL",icon:"⚽"};
  if(/volleyball|voleibol/.test(value))return {key:"volleyball",label:"VOLEIBOL",icon:"🏐"};
@@ -195,30 +213,27 @@ function boxingPoster(e,compact=false){
  const awayPhoto=e?.strAwayPlayerThumb||e?.strAwayPlayerLogo||e?._awayPhoto||teamLogo(e,"away")||boxingFighterPhoto(away);
  const fighterPhoto=(name,image)=>'<div class="mma-fighter-photo'+(image?' has-photo':'')+'"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(image?'<img src="'+esc(image)+'" alt="Foto de '+esc(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove();this.parentElement.classList.remove(\'has-photo\')">':'')+'</div>';
  const imageLayer=src?'<img class="boxing-event-poster" src="'+esc(src)+'" alt="Foto del evento '+esc(home)+' vs '+esc(away)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'<div class="mma-fighter-photos boxing-fighter-photos">'+fighterPhoto(home,homePhoto)+fighterPhoto(away,awayPhoto)+'</div>';
- const location=String(e?.strLeague||"Boxeo");
- return '<div class="boxing-poster '+(compact?"compact":"")+(src?" has-image":"")+'" role="img" aria-label="Cartelera de boxeo: '+esc(home)+' contra '+esc(away)+'">'+
+ const location=String(e?.strLeague||"Boxeo"),bare=combatCategory(e)==="BARE KNUCKLE";
+ return '<div class="boxing-poster '+(bare?"bare-knuckle-poster ":"")+(compact?"compact":"")+(src?" has-image":"")+'" role="img" aria-label="Cartelera '+(bare?"bare knuckle":"de boxeo")+': '+esc(home)+' contra '+esc(away)+'">'+
   imageLayer+
-  '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">FIGHT NIGHT</span>'+
+  '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">'+(bare?esc(leagueKey(e))+' · BARE KNUCKLE':'FIGHT NIGHT')+'</span>'+
   '<span class="boxing-poster-match"><b>'+esc(home)+'</b><strong>VS</strong><b>'+esc(away)+'</b></span>'+
   '<span class="boxing-poster-location">'+esc(location)+'</span></div>';
 }
 function mmaPoster(e,compact=false){
  const home=teamName(e,"home"),away=teamName(e,"away");
- const matchup=(home+" "+away).toLowerCase();
- const isHeadliner=matchup.includes("buckley")&&matchup.includes("malott");
- const eventPoster="https://s.yimg.com/lo/mysterio/api/b44aee69ee2d8870699d942c5bffb196138ece5794c9ea2665e0fa6c9266f56f/lightyear_networkapi/resizefill_w1080_h1350%3Bquality_80%3Bformat_jpg/https%3A/media.zenfs.com/en/sb_nation_articles_115/949db46a1822bc06ff309d1be7fb5b77.jpg";
- const officialSrc=isHeadliner?eventPoster:"";
+ const officialSrc=[e?.strEventThumb,e?.strThumb,e?.strPoster,e?._poster].find(v=>typeof v==="string"&&/^https?:\/\//i.test(v))||"";
  const homePhoto=teamLogo(e,"home"),awayPhoto=teamLogo(e,"away");
  const league=String(e?.strLeague||"UFC · MMA");
  const fighterPhoto=(name,src)=>'<div class="mma-fighter-photo'+(src?' has-photo':'')+'"><b>'+esc(name.slice(0,2).toUpperCase())+'</b>'+(src?'<img src="'+esc(src)+'" alt="Foto de '+esc(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove();this.parentElement.classList.remove(\'has-photo\')">':'')+'</div>';
  return '<div class="boxing-poster mma-poster '+(compact?"compact":"")+(officialSrc?" has-image":"")+'" role="img" aria-label="Cartelera UFC/MMA: '+esc(home)+' contra '+esc(away)+'">'+
   (officialSrc?'<img class="mma-event-poster" src="'+esc(officialSrc)+'" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'<div class="mma-fighter-photos">'+fighterPhoto(home,homePhoto)+fighterPhoto(away,awayPhoto)+'</div>')+
-  '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">UFC · MMA</span>'+
+  '<span class="boxing-poster-glow"></span><span class="boxing-poster-label">'+(combatCategory(e)==="UFC"?"UFC":"MMA")+'</span>'+
   '<span class="boxing-poster-match"><b>'+esc(home)+'</b><strong>VS</strong><b>'+esc(away)+'</b></span>'+
   '<span class="boxing-poster-location">'+esc(league)+'</span></div>';
 }
-function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(/boxing|boxeo/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return boxingPoster(e,compact);if(/ufc|mma|mixed martial|ultimate fighting/i.test([e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ")))return mmaPoster(e,compact);if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
-function feedVisual(e){const combat=[e?.strSport,e?.sport,e?.strLeague,e?.strEvent].filter(Boolean).join(" ");if(/ufc|mma|mixed martial|ultimate fighting/i.test(combat))return mmaPoster(e,true);if(/boxing|boxeo/i.test(combat))return boxingPoster(e,true);return sportArtwork(e,"card")}
+function matchupVisual(e,compact=false){const home=teamLogo(e,"home"),away=teamLogo(e,"away"),hn=teamName(e,"home"),an=teamName(e,"away"),k=leagueKey(e)||e.strSport||"SPORTS";if(["BOXEO","BARE KNUCKLE"].includes(combatCategory(e)))return boxingPoster(e,compact);if(["UFC","MMA"].includes(combatCategory(e)))return mmaPoster(e,compact);if(!home&&!away)return compact?sportArtwork(e,"card"):"";const logo=(src,name)=>src?'<img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" referrerpolicy="no-referrer">':'<span class="team-fallback">'+esc(name.slice(0,2).toUpperCase())+'</span>';return '<div class="matchup-visual '+(compact?"compact":"")+'"><div class="team-side">'+logo(home,hn)+'<b>'+esc(hn)+'</b></div><div class="versus"><small>'+esc(k)+'</small><strong>VS</strong></div><div class="team-side">'+logo(away,an)+'<b>'+esc(an)+'</b></div></div>'}
+function feedVisual(e){const type=combatCategory(e);if(type==="UFC"||type==="MMA")return mmaPoster(e,true);if(type==="BOXEO"||type==="BARE KNUCKLE")return boxingPoster(e,true);return sportArtwork(e,"card")}
 
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 
@@ -281,7 +296,7 @@ async function installTvListingApp(){
 window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;if(state.view==="install")dashboard()});
 window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;if(state.view==="install")dashboard()});
 
-function chips(){const selectedCombat=state.sport===COMBAT_CATEGORY||state.sport==="Boxeo"||state.sport==="UFC/MMA";return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL",COMBAT_CATEGORY,"Champions League","Fútbol","Tenis","NCAA","Fórmula 1"].map(x=>`<button data-sport="${x}" class="chip ${(x===COMBAT_CATEGORY?selectedCombat:state.sport===x)?"active":""}">${x}</button>`).join("")}</div>`}
+function chips(){const selectedCombat=state.sport===COMBAT_CATEGORY||state.sport==="Boxeo"||state.sport==="UFC/MMA"||state.sport==="BKFC/BKB";return `<div class="chips">${["Todos","NFL","NBA","MLB","NHL",COMBAT_CATEGORY,"Champions League","Fútbol","Tenis","NCAA","Fórmula 1"].map(x=>`<button data-sport="${x}" class="chip ${(x===COMBAT_CATEGORY?selectedCombat:state.sport===x)?"active":""}">${x}</button>`).join("")}</div>`}
 function providerCards(){return `<div id="providerGrid" class="grid provider-grid"><div class="notice">Actualizando próximos eventos por plataforma…</div></div>`}
 function netflixUpcomingEvent(){
  const today=dateKey();
@@ -330,7 +345,7 @@ function eventBroadcastProviders(e){
 function providerEventsForPlatform(name){
  const key=canonicalProviderName(name),today=dateKey(0),lastDay=dateKey(6);
  if(!key)return [];
- const candidates=[...sliderEvents,...scheduleEvents,...providerUpcomingEvents];
+ const candidates=[...sliderEvents,...scheduleEvents,...providerUpcomingEvents,...BOXING_SCHEDULE];
  if(key==="Netflix"){
   const announced=netflixUpcomingEvent();
   if(announced)candidates.push(announced);
@@ -567,6 +582,7 @@ function scheduleFilterControls(){
 }
 function scheduleMatchesFilters(e){
  if(!(state.sport==="Fútbol"?footballFilter(e):sportMatches(e,state.sport)))return false;
+ if(state.sport===COMBAT_CATEGORY&&combatFilter!=="Todos"&&combatCategory(e)!==combatFilter)return false;
  if(scheduleFilters.favoritesOnly&&!isFavoriteMatch(e))return false;
  if(scheduleFilters.league&&String(e.strLeague||"")!==scheduleFilters.league)return false;
  if(scheduleFilters.team&&![e.strHomeTeam,e.strAwayTeam].includes(scheduleFilters.team))return false;
@@ -575,6 +591,7 @@ function scheduleMatchesFilters(e){
 }
 function renderScheduleDynamic(){const node=document.getElementById("scheduleDynamic");if(!node)return;node.innerHTML=scheduleCards();bindScheduleFilterControls()}
 function bindScheduleFilterControls(){
+ document.querySelectorAll("[data-combat-filter]").forEach(button=>button.onclick=()=>{combatFilter=button.dataset.combatFilter;renderScheduleDynamic()});
  document.querySelectorAll("[data-schedule-filter]").forEach(x=>x.onchange=()=>{scheduleFilters[x.dataset.scheduleFilter]=x.value;renderScheduleDynamic()});
  const fav=document.getElementById("favoriteOnlyToggle");if(fav)fav.onclick=()=>{scheduleFilters.favoritesOnly=!scheduleFilters.favoritesOnly;renderScheduleDynamic()};
  const alerts=document.getElementById("transmissionAlertToggle");if(alerts)alerts.onclick=toggleTransmissionAlerts;
@@ -605,7 +622,7 @@ function setupFavoriteInteractions(){
 }
 
 function scheduleControls(){return `<div class="chips schedule-tabs">${[["today","Hoy"],["tomorrow","Mañana"],["week","Próximos 7 días"],["month","Próximos 30 días"]].map(x=>`<button data-range="${x[0]}" class="chip ${scheduleRange===x[0]?"active":""}">${x[1]}</button>`).join("")}</div>`}
-function sportMatches(e,s){if(s==="Todos")return true;if(s==="Champions League")return isChampionsLeague(e);const x=String([e.strLeague,e.strSport,e.strEvent].join(" ")).toLowerCase();if(s==="NFL")return /\bnfl\b|national football league/.test(x);if(s==="NBA")return /\bnba\b|national basketball association/.test(x)&&!/ncaa|college/.test(x);if(s==="MLB")return /\bmlb\b|major league baseball/.test(x);if(s==="NHL")return /\bnhl\b|national hockey league/.test(x);if(s===COMBAT_CATEGORY||s==="Boxeo"||s==="UFC/MMA")return /boxing|boxeo|\bufc\b|\bmma\b|mixed martial/.test(x);if(s==="Fútbol")return /soccer|fútbol|football/.test(x)&&!/american football|college football|national football league/.test(x);if(s==="Tenis")return /tennis|tenis|\batp\b|\bwta\b/.test(x);if(s==="NCAA")return /ncaa|college|division 1/.test(x);if(s==="Fórmula 1")return /formula 1|formula one|\bf1\b/.test(x);return x.includes(s.toLowerCase())}
+function sportMatches(e,s){if(s==="Todos")return true;if(s==="Champions League")return isChampionsLeague(e);const x=String([e.strLeague,e.strSport,e.strEvent].join(" ")).toLowerCase();if(s==="NFL")return /\bnfl\b|national football league/.test(x);if(s==="NBA")return /\bnba\b|national basketball association/.test(x)&&!/ncaa|college/.test(x);if(s==="MLB")return /\bmlb\b|major league baseball/.test(x);if(s==="NHL")return /\bnhl\b|national hockey league/.test(x);if(s===COMBAT_CATEGORY)return !!combatCategory(e);if(s==="Boxeo")return combatCategory(e)==="BOXEO";if(s==="UFC/MMA")return ["UFC","MMA"].includes(combatCategory(e));if(s==="BKFC/BKB")return combatCategory(e)==="BARE KNUCKLE";if(s==="Fútbol")return /soccer|fútbol|football/.test(x)&&!/american football|college football|national football league/.test(x);if(s==="Tenis")return /tennis|tenis|\batp\b|\bwta\b/.test(x);if(s==="NCAA")return /ncaa|college|division 1/.test(x);if(s==="Fórmula 1")return /formula 1|formula one|\bf1\b/.test(x);return x.includes(s.toLowerCase())}
 const ESPN_SPORT_FEEDS={
  MLB:{paths:["baseball/mlb"],sport:"Baseball",league:"MLB"},
  NFL:{paths:["football/nfl"],sport:"American Football",league:"NFL"},
@@ -902,14 +919,21 @@ function downloadReminderCalendar(record){
  a.href=url;a.download=(record.title||"partido").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".ics";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  showReminderToast("Calendario descargado con aviso 5 minutos antes. Ábrelo para guardarlo.");
 }
+function combatFilterControls(){
+ if(state.sport!==COMBAT_CATEGORY)return "";
+ const options=[["Todos","Todos"],["BOXEO","Boxeo"],["UFC","UFC"],["MMA","MMA"],["BARE KNUCKLE","BKFC / BKB"]];
+ return '<nav class="combat-filter-tabs" aria-label="Tipos de deportes de combate">'+options.map(([key,label])=>
+  '<button type="button" data-combat-filter="'+key+'" class="combat-filter-chip'+(combatFilter===key?" active":"")+'" aria-pressed="'+(combatFilter===key)+'">'+label+'</button>'
+ ).join("")+'</nav>';
+}
 function scheduleCards(){
- const intro=footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
+ const intro=combatFilterControls()+footballLeagueSelector()+(state.sport==="Champions League"?championsIntro():""),controls=scheduleFilterControls();
  const rows=scheduleEvents.filter(scheduleMatchesFilters);
  if(!rows.length)return intro+controls+'<div class="notice">'+(scheduleFilters.favoritesOnly&&!favoriteTeams().length?'Agrega equipos favoritos desde los botones ☆ de cada partido. ':state.sport==="Champions League"&&championsFeedFailed?'Fuente no disponible. Consulta el calendario oficial. ':state.sport==="MLB"&&mlbFeedFailed?'No se pudo consultar el calendario MLB. Reintenta o consulta MLB.com. ':state.sport==="MLB"?'No hay partidos MLB programados en este período. Fuera de temporada es normal que no haya encuentros. ':'No hay partidos que coincidan con estos filtros. ')+(scheduleFilters.favoritesOnly?'Desactiva “Solo favoritos” o sigue equipos desde sus partidos.':'Prueba otro período o cambia los filtros.')+'</div>';
- return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):"")+'</div>'+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
+ return intro+controls+'<div class="schedule-list">'+rows.map(e=>'<article class="schedule-card searchable" data-combat-type="'+esc(combatCategory(e))+'" data-search="'+esc(((e.strEvent||"")+" "+(e.strLeague||"")+" "+(e.strSport||"")+" "+(e.strHomeTeam||"")+" "+(e.strAwayTeam||"")+" "+confirmedTransmission(e).join(" ")).toLowerCase())+'">'+matchupVisual(e,true)+'<div class="schedule-info"><div class="row"><span class="badge">'+esc(leagueKey(e)||e.strSport||"DEPORTE")+'</span><span class="small muted">'+esc([e.dateEvent,e.strTime].filter(Boolean).join(" • "))+'</span></div><h3>'+esc(e.strEvent||"Evento deportivo")+'</h3>'+scoreBadge(e)+'<div class="small muted">'+esc(e.strLeague||"")+(e._managed?(e._verified?" • VERIFICADO":" • ADMIN"):e._combatOfficial?" • Cartelera del organizador":"")+'</div>'+(e._combatOfficial?'<div class="combat-official-info">Horario y disponibilidad de transmisión por confirmar</div>':"")+transmissionStateBadge(e)+watchBadges(e)+favoriteTeamActions(e)+reminderActions(e)+shareEventActions(e)+'</div></article>').join("")+'</div>';
 }
 
-const BOXING_SCHEDULE_URL="https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule";
+const BOXING_SCHEDULE_URL="https://www.boxingscene.com/schedule";
 const BOXING_SCHEDULE=[
  ["2026-10-17","Daniel Dubois vs Fabio Wardley","London, DAZN","DAZN"],
  ["2026-10-17","Sebastian Fundora vs Ermal Hadribeaj","Las Vegas, DAZN / TNT","DAZN"],
@@ -918,18 +942,49 @@ const BOXING_SCHEDULE=[
  ["2026-10-31","Canelo Alvarez vs Christian Mbilli","Riyadh, DAZN PPV","DAZN"],
  ["2026-11-07","Chris Billam-Smith vs Cheavon Clarke","London, Paramount+","Paramount+"],
  ["2026-11-08","Alycia Baumgardner vs Elif Nur Turhan","Arlington, ESPN","ESPN"],
- ["2026-12-11","Tyson Fury vs Anthony Joshua","Cardiff, Netflix","Netflix"],
- ["2026-12-12","Dmitry Bivol vs Callum Smith","Yekaterinburg",""]
+ ["2026-11-20","Gabriela Fundora vs Jasmina Zapotoczna","Indio, California • DAZN","DAZN"],
+ ["2026-11-28","Agit Kabayel vs Nelson Hysa","Düsseldorf, Alemania • DAZN","DAZN"],
+ ["2026-12-04","Adam Azim vs Gabriel Gollaz Valenzuela","Londres • DAZN","DAZN"]
 ].map((row,index)=>{
  const [dateEvent,strEvent,details,platform]=row,parts=strEvent.split(" vs ");
  return {idEvent:"espn-boxing-"+dateEvent+"-"+index,strEvent,strHomeTeam:parts[0],strAwayTeam:parts[1],strSport:"Boxing",strLeague:"Boxeo • "+details,dateEvent,strTime:"Hora por confirmar · RD",_boxingSchedule:true,_espn:true,_watchOptions:platform?[platform]:[],_sourceUrl:BOXING_SCHEDULE_URL};
 });
+// Upcoming bare-knuckle cards checked against their organizers on 2026-11-18.
+// Do not fabricate regional start times or broadcaster rights.
+const BARE_KNUCKLE_EVENTS=[
+ ["2026-11-20","BKFC","BKFC Fight Night Myrtle Beach","Keith Richardson","Joshua Oxendine","https://www.bkfc.com/events"],
+ ["2026-11-21","BKB","Bally's Fight Night Burbank","Hank Lundy","Jairo Santos","https://bkbbareknuckle.com/schedule/bkb-burbank-ballys-show/"],
+ ["2026-12-04","BKFC","BKFC Fight Night Hershey","Pague","Richman","https://www.bkfc.com/events"],
+ ["2026-12-11","BKFC","BKFC 97 Hollywood","Henry","Collard","https://www.bkfc.com/events"]
+].map(([dateEvent,org,eventName,home,away,source])=>({
+ idEvent:"official-"+org.toLowerCase()+"-"+dateEvent,
+ strEvent:eventName+" • "+home+" vs "+away,
+ strHomeTeam:home,strAwayTeam:away,strSport:"Bare Knuckle Boxing",
+ strLeague:org+" • "+eventName,dateEvent,strTime:"Hora por confirmar · RD",
+ strStatus:"SCHEDULED",_sourceUrl:source,_combatOfficial:true
+}));
 function boxingGames(offsets,responses){
  const start=dateKey(Math.min(...offsets)),end=dateKey(Math.max(...offsets));
- const live=responses.flatMap(x=>x?.events||[]).filter(e=>e.strEvent&&sportMatches(e,"Boxeo")).map(e=>({...e,_boxingFeed:true}));
+ const live=responses.flatMap(x=>x?.events||[]).filter(e=>e?.strEvent&&combatCategory(e)==="BOXEO").map(e=>({...e,_boxingFeed:true}));
  const curated=BOXING_SCHEDULE.filter(e=>e.dateEvent>=start&&e.dateEvent<=end);
- return [...new Map([...curated,...live].map(e=>[e.idEvent||[e.dateEvent,e.strEvent].join("|"),e])).values()];
+ return [...new Map([...live,...curated].map(e=>[combatEventKey(e),e])).values()];
 }
+function combatEvents(offsets,responses=[],espnRows=[]){
+ const start=dateKey(Math.min(...offsets)),end=dateKey(Math.max(...offsets));
+ const bare=BARE_KNUCKLE_EVENTS.filter(e=>e.dateEvent>=start&&e.dateEvent<=end);
+ const boxing=boxingGames(offsets,responses);
+ const other=responses.flatMap(x=>x?.events||[]).filter(e=>e?.strEvent&&["UFC","MMA","BARE KNUCKLE"].includes(combatCategory(e)));
+ const ufc=espnRows.filter(e=>e?.strEvent&&["UFC","MMA"].includes(combatCategory(e)));
+ const found=new Map();
+ for(const e of [...ufc,...bare,...boxing,...other]){
+  const date=sliderLocalDate(e);
+  if(date<start||date>end)continue;
+  const key=combatEventKey(e);
+  if(!found.has(key))found.set(key,e);
+ }
+ return [...found.values()].sort((a,b)=>String(a.strTimestamp||a.dateEvent).localeCompare(String(b.strTimestamp||b.dateEvent)));
+}
+
 function setupScheduleAutoRefresh(){
  if(!scheduleRefreshTimer)scheduleRefreshTimer=setInterval(()=>{
   if((state.view==="schedule"||state.view==="favorites")&&document.visibilityState==="visible")loadSchedule(true);
@@ -952,7 +1007,7 @@ async function loadSchedule(silent=false){
  const includeUcl=allSports||selected==="Fútbol"||selected==="Champions League";
  const includeMlb=allSports||selected==="MLB";
  const includeNhl=allSports||selected==="NHL";
- const includeBoxing=allSports||selected===COMBAT_CATEGORY||selected==="Boxeo"||selected==="UFC/MMA";
+ const includeBoxing=allSports||[COMBAT_CATEGORY,"Boxeo","UFC/MMA","BKFC/BKB"].includes(selected);
  const espnKeys=allSports?Object.keys(ESPN_SPORT_FEEDS).filter(key=>key!=="NHL"&&key!=="MLB"):
   selected==="NFL"?["NFL"]:selected==="NBA"?["NBA"]:(selected===COMBAT_CATEGORY||selected==="UFC/MMA")?["UFC"]:
   selected==="NCAA"?["NCAA"]:selected==="Tenis"?["TENIS"]:selected==="Fórmula 1"?["F1"]:selected==="Fútbol"?["SOCCER"]:[];
@@ -978,9 +1033,9 @@ async function loadSchedule(silent=false){
    const d=x.starts_at?new Date(x.starts_at):null;
    return {strEvent:x.title,strSport:x.sport||"Sports",strTimestamp:x.starts_at,dateEvent:d?d.toISOString().slice(0,10):"",strTime:d?d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"",strLeague:x.region||x.rights_scope||"",_managed:true,_verified:!!x.verified,_providerName:providers.find(p=>String(p.id)===String(x.provider_id))?.name||"",_channelName:channels.find(ch=>String(ch.id)===String(x.channel_id))?.name||""};
   });
-  const boxing=includeBoxing?boxingGames(offsets,rs):[];
+  const boxing=includeBoxing?combatEvents(offsets,rs,espn):[];
   const external=rs.flatMap(x=>x?.events||[]).filter(e=>e.strEvent)
-   .filter(e=>!sportMatches(e,"MLB")&&(!nhl.length||!sportMatches(e,"NHL"))&&!sportMatches(e,"Boxeo")&&!(ucl.length&&isChampionsLeague(e)));
+   .filter(e=>!sportMatches(e,"MLB")&&(!nhl.length||!sportMatches(e,"NHL"))&&(!includeBoxing||!combatCategory(e))&&!(ucl.length&&isChampionsLeague(e)));
   const espnMatchKey=e=>{
    const date=String(e.dateEvent||"");
    const sides=[e.strHomeTeam,e.strAwayTeam].filter(Boolean).map(x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,"")).sort();
@@ -992,7 +1047,7 @@ async function loadSchedule(silent=false){
    const label=String(e.strEvent||"").toLowerCase().replace(/[^a-z0-9]/g,"");
    return !primaryIds.has(espnMatchKey(e))&&!primaryIds.has(String(e.dateEvent||"")+"|"+label);
   });
-  scheduleEvents=[...managed,...fallback,...mlb,...nhl,...ucl,...boxing,...espn]
+  scheduleEvents=[...managed,...fallback,...mlb,...nhl,...ucl,...boxing,...espn.filter(e=>!includeBoxing||!combatCategory(e))]
    .sort((a,b)=>String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||"")))
    .slice(0,600);
   checkTransmissionAnnouncements(scheduleEvents);renderFavoriteHome(); const target=document.getElementById("scheduleDynamic");
@@ -1015,7 +1070,7 @@ async function loadSchedule(silent=false){
  }
 }
 
-function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC/MMA · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
+function heroSlider(){return `<section class="sports-slider daily-slider" aria-label="Eventos deportivos de hoy"><div class="daily-slider-heading"><div><span class="daily-kicker">AGENDA DEL DÍA</span><h2>Eventos deportivos de hoy</h2><p id="dailySliderSummary">Boxeo · UFC · MMA · BKFC/BKB · MLB · NFL · NHL · Fórmula 1 · Champions League y soccer destacado</p></div><span id="dailySliderCount" class="daily-count">Cargando…</span></div><button id="slidePrev" class="slide-btn prev" aria-label="Evento anterior">‹</button><div id="sportsHero" class="hero-slide"><div class="daily-event-card"><div class="daily-card-body"><span class="badge">AGENDA DEL DÍA</span><h3>Cargando eventos deportivos…</h3></div></div></div><button id="slideNext" class="slide-btn next" aria-label="Siguiente evento">›</button></section>`}
 function content(){
  const filteredChannels=state.sport==="Todos"?channels:channels.filter(c=>c.sports.includes(state.sport));
  const filteredEvents=state.sport==="Todos"?events:events.filter(e=>e.sport===state.sport);
@@ -1177,7 +1232,7 @@ function bind(){
    if(state.sport==="Fútbol")footballLeague="Todas";
    if(canView("schedule")){
     state.view="schedule";
-    if(state.sport==="Champions League"||state.sport==="Boxeo")scheduleRange="month";
+    if(state.sport==="Champions League"||state.sport==="Boxeo"||state.sport===COMBAT_CATEGORY||state.sport==="BKFC/BKB")scheduleRange="month";
     else if(!wasSchedule)scheduleRange=state.sport==="Todos"?"week":"month";
    }
    dashboard();
@@ -1323,13 +1378,15 @@ async function loadSportsSlider(force=false){
    championsGames([0]).catch(e=>{console.warn("UCL day feed",e);return []}),
    Promise.all(keys.map(k=>espnGames([0],k).catch(e=>{console.warn("ESPN day feed "+k,e);return []}))).then(rows=>rows.flat())
   ]);
-  const boxing=boxingGames([0],[{events:general}]).filter(e=>!e._boxingSchedule);
+  const boxing=combatEvents([0],[{events:general}],espn);
   const generalWithoutNhl=nhl.length?general.filter(e=>!sportMatches(e,"NHL")):general;
-  const events=[...featuredCflGreyCup(today),...nhl,...generalWithoutNhl,...mlb,...ucl,...espn,...boxing].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
+  const generalWithoutCombat=generalWithoutNhl.filter(e=>!combatCategory(e));
+  const espnWithoutCombat=espn.filter(e=>!combatCategory(e));
+  const events=[...featuredCflGreyCup(today),...boxing,...nhl,...generalWithoutCombat,...mlb,...ucl,...espnWithoutCombat].filter(e=>e?.strEvent&&sliderLocalDate(e)===today);
   const seen=new Set();
   sliderEvents=events.filter(e=>{const k=sliderEventKey(e);if(seen.has(k))return false;seen.add(k);return true})
    .sort((a,b)=>{
-    const priority=e=>({"CFL":-1,"BOXEO":0,"UFC/MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
+    const priority=e=>({"CFL":-1,"BOXEO":0,"BKFC":1,"BKB":1,"UFC":1,"MMA":1,"MLB":2,"NFL":3,"NHL":4,"F1":5,"UCL":6,"SOCCER":7}[leagueKey(e)]??8);
     return priority(a)-priority(b)||String(a.strTimestamp||a.dateEvent||"").localeCompare(String(b.strTimestamp||b.dateEvent||""));
    }).slice(0,48);
   shuffleDailyEvents();
