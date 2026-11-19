@@ -48,7 +48,7 @@ const ENGLISH_COPY=[
  ["Programación","Schedule"],["Inicio","Home"],["Agenda","Schedule"],["Canales","Channels"],["Ligas","Leagues"],["Favoritos","Favorites"],
  ["Instalar app","Install app"],["Instalar","Install"],["Mi cuenta","My account"],["Mi perfil","My profile"],["Cerrar sesión","Sign out"],
  ["Bienvenido","Welcome"],["Inicia sesión para continuar","Sign in to continue"],["Usuario o correo","Username or email"],
- ["Contraseña","Password"],["Mostrar contraseña","Show password"],["Entrar","Sign in"],["¿Olvidaste tu contraseña?","Forgot your password?"],
+ ["Contraseña","Password"],["Mostrar contraseña","Show password"],["Recordar mi usuario en este dispositivo","Remember my username on this device"],["Si el navegador te ofrece guardar la contraseña, puedes aceptarlo. La aplicación no guarda contraseñas.","If the browser offers to save your password, you can allow it. The app does not store passwords."],["¿Problemas para entrar? Recuperar acceso","Trouble signing in? Recover access"],["Entrar","Sign in"],["¿Olvidaste tu contraseña?","Forgot your password?"],
  ["No se pudo cargar el servicio de acceso.","Could not load the sign-in service."],
  ["No se pudo conectar el servicio de acceso. Recarga e intenta nuevamente.","Could not connect to sign-in. Reload and try again."],
  ["El navegador todavía no ofrece el botón directo.","Your browser does not offer one-tap installation yet."],
