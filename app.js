@@ -790,12 +790,14 @@ async function nhlGames(offsets){
     const payload=await response.json();
     const games=job.type==="schedule"?nhlScheduleGames(payload):(payload?.games||[]);
     if(!Array.isArray(games))throw Error("Invalid NHL "+job.type+" response");
-    officialGames.push(...games);
+    officialGames.push(...games.map(game=>({...game,_scoreFeed:job.type==="score"})));
    }catch(error){console.warn("NHL official "+job.type+" feed "+job.date,error)}
   }
  }
  await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
- const official=[...new Map(officialGames.map(g=>[g.id,nhlOfficialEvent(g)]).filter(x=>x[1])).values()]
+ const latest=new Map();
+ for(const game of officialGames){const previous=latest.get(game.id);if(!previous||(!previous._scoreFeed&&game._scoreFeed))latest.set(game.id,game)}
+ const official=[...latest.values()].map(nhlOfficialEvent).filter(Boolean)
   .filter(e=>requested.has(e.dateEvent));
  // ESPN backs up missing official fixtures; never replaces official scores.
  let backup=[];
