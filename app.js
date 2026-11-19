@@ -143,7 +143,6 @@ const OFFICIAL_SCHEDULES={
  NBA:"https://www.nba.com/schedule",
  BOXEO:"https://www.espn.com/boxing/story/_/id/12508267/boxing-fight-schedule",
  UFC:"https://www.ufc.com/events",
- MMA:"https://www.ufc.com/events",
  BKFC:"https://www.bkfc.com/events",
  BKB:"https://bkbbareknuckle.com/schedule/",
  CFL:"https://www.cfl.ca/schedule/"
