@@ -25,8 +25,8 @@ if(Number(version)<111){
  assert.ok(app.includes('Reintentar actualización'),'Feed retry missing');
  assert.ok(html.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from HTML');
  assert.ok(sw.includes('platform-carousels.css?v=1'),'Provider carousel CSS missing from offline cache');
- assert.ok(html.includes('app.js?v=107&auth=1'),'Provider carousel app cache-bust missing');
- assert.ok(sw.includes('app.js?v=107&auth=1'),'Provider carousel app asset missing from cache');
+ assert.ok(html.includes('app.js?v=107&nhl=2'),'Provider carousel app cache-bust missing');
+ assert.ok(sw.includes('app.js?v=107&nhl=2'),'Provider carousel app asset missing from cache');
  assert.ok(app.includes('function providerEventsForPlatform(name)'),'Provider event selection missing');
  assert.ok(app.includes('function changeProviderSlide(card,step)'),'Independent provider controls missing');
  assert.ok(app.includes('function loadProviderUpcomingEvents(force=false)'),'Upcoming verified events loader missing');
